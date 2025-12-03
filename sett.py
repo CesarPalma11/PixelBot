@@ -4,13 +4,13 @@ import os
 token = os.getenv("TOKEN")
 
 # Token permanente de WhatsApp API
-whatsapp_token = os.getenv("WHATSAPP_TOKEN")
+whatsapp_token = os.getenv("EAAUg1Hjrj6EBQH7NLCh62dLK3MAvdDotjBXNCG4xyaq366MgS9STAPZCYrVgZC4X7KZCOuIt3Q8H0dpMRDPBJCtX5EzjZArhqL29qVooK46mRg50CVPW5pSTNrofJrnZB9Qyz5jGqpz3BxEEYoGNdDczC0kZCjcZC22KS7Q8uuvGWgmVNxQpAeHWnY9dxvDLBnjWRcIHtfvrh28w3mXFK7b5DNapCsj3Lcvd45vkmhETbHqvkPkz97C7m74HIP5WL0GKpPmyQBj0lIjhIYMC4uZBG11D")
 
 # Phone Number ID
-PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
+PHONE_NUMBER_ID = os.getenv("876431475556153")
 
 # URL final que usa el bot para enviar mensajes
-whatsapp_url = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
+whatsapp_url = f"https://graph.facebook.com/v22.0/{876431475556153}/messages"
 
 # URL de un documento de prueba
 document_url = os.getenv("DOCUMENT_URL")
