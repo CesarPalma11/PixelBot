@@ -1,7 +1,7 @@
 import os
 
 # Token de verificación del webhook (el que configuras en Meta)
-token = os.getenv("TOKEN")
+token = os.getenv("bigdateros")
 
 # Token permanente de WhatsApp API
 whatsapp_token = os.getenv("EAAUg1Hjrj6EBQH7NLCh62dLK3MAvdDotjBXNCG4xyaq366MgS9STAPZCYrVgZC4X7KZCOuIt3Q8H0dpMRDPBJCtX5EzjZArhqL29qVooK46mRg50CVPW5pSTNrofJrnZB9Qyz5jGqpz3BxEEYoGNdDczC0kZCjcZC22KS7Q8uuvGWgmVNxQpAeHWnY9dxvDLBnjWRcIHtfvrh28w3mXFK7b5DNapCsj3Lcvd45vkmhETbHqvkPkz97C7m74HIP5WL0GKpPmyQBj0lIjhIYMC4uZBG11D")
