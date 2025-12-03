@@ -162,94 +162,81 @@ def administrar_chatbot(text, number, messageId, name):
     queue = []
     print("Procesando mensaje usuario:", text_lower)
 
-    # Marcar el mensaje como leído
     queue.append(markRead_Message(messageId))
     time.sleep(0.5)
 
-    # =============================
-    # MENSAJE DE BIENVENIDA
-    # =============================
+    # -----------------
+    # Mensaje de bienvenida
+    # -----------------
     if "hola" in text_lower:
         body = "¡Hola! Soy PixelBot 👋, en qué puedo ayudarte?"
         footer = "Equipo PixelBot"
-        options = ["Quiero automatizar mi WhatsApp", "Quiero una página web"]
+        options = ["Automatizar WhatsApp", "Crear página web", "Soporte / Consultas"]
         queue.append(replyReaction_Message(number, messageId, "🤖"))
         queue.append(buttonReply_Message(number, options, body, footer, "menu_principal", messageId))
 
-    # =============================
-    # OPCIONES PRINCIPALES
-    # =============================
-    elif "quiero automatizar mi whatsapp" in text_lower:
-        body = "Perfecto! ¿Qué tipo de automatización te interesa?"
-        footer = "Automatización WhatsApp"
-        options = [
-            "Respuestas automáticas",
-            "Menú interactivo con botones",
-            "Integración con base de datos",
-            "Notificaciones y alertas"
-        ]
-        queue.append(buttonReply_Message(number, options, body, footer, "auto_whatsapp", messageId))
+    # -----------------
+    # Submenú: Automatizar WhatsApp
+    # -----------------
+    elif "automatizar" in text_lower:
+        body = "Elige qué tipo de automatización deseas:"
+        footer = "Automatizaciones"
+        options = ["Chatbot básico", "Respuestas automáticas", "Enviar documentos", "Integraciones externas"]
+        queue.append(listReply_Message(number, options, body, footer, "automatizar", messageId))
 
-    elif "quiero una página web" in text_lower:
-        body = "¡Genial! ¿Qué tipo de página web deseas crear?"
+    # -----------------
+    # Submenú: Crear página web
+    # -----------------
+    elif "página web" in text_lower or "crear" in text_lower:
+        body = "Selecciona el tipo de página que deseas:"
         footer = "Servicios Web"
-        options = [
-            "Página corporativa",
-            "Tienda online (e-commerce)",
-            "Landing page para campaña",
-            "Blog personal o profesional"
-        ]
-        queue.append(buttonReply_Message(number, options, body, footer, "web_opciones", messageId))
+        options = ["Landing page", "E-commerce", "Portafolio personal", "Blog / Noticias"]
+        queue.append(listReply_Message(number, options, body, footer, "web", messageId))
 
-    # =============================
-    # SUBMENÚ: Automatización WhatsApp
-    # =============================
+    # -----------------
+    # Submenú: Soporte / Consultas
+    # -----------------
+    elif "soporte" in text_lower or "consultas" in text_lower:
+        body = "Elige una opción de soporte:"
+        footer = "Soporte PixelBot"
+        options = ["Precios", "Horarios de atención", "Contacto directo"]
+        queue.append(listReply_Message(number, options, body, footer, "soporte", messageId))
+
+    # -----------------
+    # Respuestas específicas para cada opción
+    # -----------------
+    elif "chatbot básico" in text_lower:
+        queue.append(text_Message(number, "Un chatbot básico puede responder preguntas frecuentes automáticamente."))
     elif "respuestas automáticas" in text_lower:
-        body = "Las respuestas automáticas permiten contestar a tus clientes sin estar presente. Puedes configurar:"
-        footer = "Automatización WhatsApp"
-        options = [
-            "Responder preguntas frecuentes",
-            "Mensajes de bienvenida",
-            "Responder fuera de horario"
-        ]
-        queue.append(listReply_Message(number, options, body, footer, "auto_resp", messageId))
-
-    elif "menú interactivo con botones" in text_lower:
-        body = "Puedes crear menús con botones para que tus clientes naveguen fácilmente. Ejemplos:"
-        footer = "Automatización WhatsApp"
-        options = ["Servicios", "Soporte", "Contacto"]
-        queue.append(listReply_Message(number, options, body, footer, "auto_menu", messageId))
-
-    elif "integración con base de datos" in text_lower:
-        queue.append(text_Message(number, "Podemos conectar tu WhatsApp con tu base de datos para consultas automáticas, reportes y seguimiento de clientes."))
-
-    elif "notificaciones y alertas" in text_lower:
-        queue.append(text_Message(number, "Podemos enviar notificaciones automáticas a tus clientes: confirmaciones de pedido, recordatorios, alertas importantes."))
-
-    # =============================
-    # SUBMENÚ: Página web
-    # =============================
-    elif "página corporativa" in text_lower:
-        queue.append(text_Message(number, "Una página corporativa te permitirá mostrar tu empresa, servicios y contacto profesional."))
-
-    elif "tienda online" in text_lower:
-        queue.append(text_Message(number, "Podemos crear tu tienda online con carrito de compras, pasarela de pagos y gestión de productos."))
-
+        queue.append(text_Message(number, "Podemos configurar respuestas automáticas según palabras clave."))
+    elif "enviar documentos" in text_lower:
+        queue.append(text_Message(number, "Puedes enviar documentos automáticamente a tus clientes."))
+    elif "integraciones externas" in text_lower:
+        queue.append(text_Message(number, "Integramos tu WhatsApp con CRM, Google Sheets y más."))
     elif "landing page" in text_lower:
-        queue.append(text_Message(number, "Una landing page efectiva para tus campañas de marketing o captación de leads."))
+        queue.append(text_Message(number, "Creamos páginas simples para promocionar tu negocio."))
+    elif "e-commerce" in text_lower:
+        queue.append(text_Message(number, "Creamos tiendas online completas con carrito de compras."))
+    elif "portafolio personal" in text_lower:
+        queue.append(text_Message(number, "Diseñamos un portafolio profesional para mostrar tus proyectos."))
+    elif "blog / noticias" in text_lower:
+        queue.append(text_Message(number, "Creamos blogs para publicar noticias y artículos fácilmente."))
+    elif "precios" in text_lower:
+        queue.append(text_Message(number, "Nuestros precios varían según el servicio, contáctanos para más info."))
+    elif "horarios" in text_lower:
+        queue.append(text_Message(number, "Atendemos de lunes a viernes de 9 a 18 hs."))
+    elif "contacto directo" in text_lower:
+        queue.append(text_Message(number, "Puedes escribirnos a contacto@bigdateros.com o llamar al +54 9 11 6018-5717"))
 
-    elif "blog personal" in text_lower:
-        queue.append(text_Message(number, "Podemos crear un blog con contenido dinámico, diseño responsivo y fácil de actualizar."))
-
-    # =============================
-    # MENSAJE POR DEFECTO
-    # =============================
+    # -----------------
+    # Mensaje fallback
+    # -----------------
     else:
-        queue.append(text_Message(number, "Lo siento, no entendí tu mensaje. Escribe 'hola' para empezar de nuevo."))
+        queue.append(text_Message(number, "Lo siento, no entendí tu mensaje. Escribe 'hola' para comenzar."))
 
-    # =============================
-    # ENVIAR MENSAJES
-    # =============================
+    # -----------------
+    # Enviar todos los mensajes
+    # -----------------
     for item in queue:
         enviar_Mensaje_whatsapp(item)
 
