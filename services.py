@@ -7,7 +7,7 @@ import sett  # archivo con tus variables de entorno: WHATSAPP_TOKEN, PHONE_NUMBE
 # ===========================================
 # Mensajes y medios
 # ===========================================
-STICKERS = sett.STICKERS  # stickers definidos en sett.py
+STICKERS = sett.stickers  # stickers definidos en sett.py
 
 # ===========================================
 # Funciones para obtener mensajes
