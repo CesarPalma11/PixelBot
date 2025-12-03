@@ -53,7 +53,8 @@ def recibir_mensajes():
             return 'No hay mensajes', 200
 
         message = messages[0]
-        number = message.get('from')  # <-- corregido, es un string
+        number = message.get('from')
+        number = services.replace_start(number)  # <--- aplica el prefijo correcto
         messageId = message.get('id')
 
         contacts = value.get('contacts', [{}])[0]
