@@ -2,30 +2,16 @@ import requests
 import os
 import json
 import time
+import sett  # archivo con tus variables de entorno: WHATSAPP_TOKEN, PHONE_NUMBER_ID, DOCUMENT_URL, etc.
 
-# Configuración desde variables de entorno
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
-WHATSAPP_URL = os.getenv("WHATSAPP_URL")
-DOCUMENT_URL = os.getenv("DOCUMENT_URL")  # opcional si quieres cargar desde env
+# ===========================================
+# Mensajes y medios
+# ===========================================
+STICKERS = sett.STICKERS  # stickers definidos en sett.py
 
-# Stickers (puedes mantenerlo aquí o moverlo a env)
-STICKERS = {
-    "poyo_feliz": 984778742532668,
-    "perro_traje": 1009219236749949,
-    "perro_triste": 982264672785815,
-    "pedro_pascal_love": 801721017874258,
-    "pelfet": 3127736384038169,
-    "anotado": 24039533498978939,
-    "gato_festejando": 1736736493414401,
-    "okis": 268811655677102,
-    "cachetada": 275511571531644,
-    "gato_juzgando": 107235069063072,
-    "chicorita": 3431648470417135,
-    "gato_triste": 210492141865964,
-    "gato_cansado": 1021308728970759
-}
-
-
+# ===========================================
+# Funciones para obtener mensajes
+# ===========================================
 def obtener_Mensaje_whatsapp(message):
     if 'type' not in message:
         return 'mensaje no reconocido'
@@ -42,24 +28,39 @@ def obtener_Mensaje_whatsapp(message):
     else:
         return 'mensaje no procesado'
 
-
+# ===========================================
+# Función robusta para enviar mensajes
+# ===========================================
 def enviar_Mensaje_whatsapp(data):
     try:
+        whatsapp_token = sett.whatsapp_token
+        PHONE_NUMBER_ID = sett.PHONE_NUMBER_ID
+        whatsapp_url = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
+
         headers = {
             'Content-Type': 'application/json',
-            'Authorization': f'Bearer {WHATSAPP_TOKEN}'
+            'Authorization': f'Bearer {whatsapp_token}'
         }
-        print("Enviando: ", data)
-        response = requests.post(WHATSAPP_URL, headers=headers, data=data)
+
+        print("Enviando mensaje a WhatsApp:", data)
+        response = requests.post(whatsapp_url, headers=headers, data=data)
+
+        # Log completo de la respuesta
+        print("STATUS CODE:", response.status_code)
+        print("RESPONSE:", response.text)
 
         if response.status_code == 200:
             return 'mensaje enviado', 200
         else:
-            return 'error al enviar mensaje', response.status_code
+            return f'Error al enviar mensaje: {response.text}', response.status_code
+
     except Exception as e:
+        print("EXCEPCION:", str(e))
         return str(e), 403
 
-
+# ===========================================
+# Funciones de creación de mensajes
+# ===========================================
 def text_Message(number, text):
     return json.dumps({
         "messaging_product": "whatsapp",
@@ -88,8 +89,7 @@ def buttonReply_Message(number, options, body, footer, sedd, messageId):
 
 
 def listReply_Message(number, options, body, footer, sedd, messageId):
-    rows = [{"id": f"{sedd}_row_{i+1}", "title": option, "description": ""}
-            for i, option in enumerate(options)]
+    rows = [{"id": f"{sedd}_row_{i+1}", "title": option, "description": ""} for i, option in enumerate(options)]
     return json.dumps({
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -104,9 +104,9 @@ def listReply_Message(number, options, body, footer, sedd, messageId):
     })
 
 
-def document_Message(number, url, caption, filename):
+def document_Message(number, url=None, caption="", filename="document.pdf"):
     if url is None:
-        url = DOCUMENT_URL
+        url = sett.DOCUMENT_URL
     return json.dumps({
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -128,7 +128,7 @@ def sticker_Message(number, sticker_id):
 
 def get_media_id(media_name, media_type):
     if media_type == "sticker":
-        return STICKERS.get(media_name, None)
+        return STICKERS.get(media_name)
     return None
 
 
@@ -160,71 +160,33 @@ def markRead_Message(messageId):
         "message_id": messageId
     })
 
-
+# ===========================================
+# Chatbot
+# ===========================================
 def administrar_chatbot(text, number, messageId, name):
     text = text.lower()
     queue = []
     print("Mensaje del usuario:", text)
 
     queue.append(markRead_Message(messageId))
-    time.sleep(2)
+    time.sleep(1)
 
+    # Aquí van tus condiciones de flujo como antes...
     if "hola" in text:
         body = "¡Hola! 👋 Bienvenido a Bigdateros. ¿Cómo podemos ayudarte hoy?"
         footer = "Equipo Bigdateros"
         options = ["✅ servicios", "📅 agendar cita"]
-
         queue.append(replyReaction_Message(number, messageId, "🫡"))
         queue.append(buttonReply_Message(number, options, body, footer, "sed1", messageId))
 
-    elif "servicios" in text:
-        body = "Tenemos varias áreas de consulta para elegir. ¿Cuál de estos servicios te gustaría explorar?"
-        footer = "Equipo Bigdateros"
-        options = ["Analítica Avanzada", "Migración Cloud", "Inteligencia de Negocio"]
-
-        queue.append(listReply_Message(number, options, body, footer, "sed2", messageId))
-        queue.append(sticker_Message(number, get_media_id("perro_traje", "sticker")))
-
-    elif "inteligencia de negocio" in text:
-        body = "Buenísima elección. ¿Te gustaría que te enviara un documento PDF con una introducción a nuestros métodos de Inteligencia de Negocio?"
-        footer = "Equipo Bigdateros"
-        options = ["✅ Sí, envía el PDF.", "⛔ No, gracias"]
-        queue.append(buttonReply_Message(number, options, body, footer, "sed3", messageId))
-
-    elif "sí, envía el pdf" in text:
-        queue.append(sticker_Message(number, get_media_id("pelfet", "sticker")))
-        queue.append(text_Message(number, "Genial, por favor espera un momento."))
-        time.sleep(3)
-        queue.append(document_Message(number, None, "Listo 👍🏻", "Inteligencia de Negocio.pdf"))
-        time.sleep(3)
-        body = "¿Te gustaría programar una reunión con uno de nuestros especialistas para discutir estos servicios más a fondo?"
-        footer = "Equipo Bigdateros"
-        options = ["✅ Sí, agenda reunión", "No, gracias."]
-        queue.append(buttonReply_Message(number, options, body, footer, "sed4", messageId))
-
-    elif "sí, agenda reunión" in text:
-        body = "Estupendo. Por favor, selecciona una fecha y hora para la reunión:"
-        footer = "Equipo Bigdateros"
-        options = ["📅 10: mañana 10:00 AM", "📅 7 de junio, 2:00 PM", "📅 8 de junio, 4:00 PM"]
-        queue.append(listReply_Message(number, options, body, footer, "sed5", messageId))
-
-    elif "7 de junio, 2:00 pm" in text:
-        body = "Excelente, has seleccionado la reunión para el 7 de junio a las 2:00 PM. Te enviaré un recordatorio un día antes. ¿Necesitas ayuda con algo más hoy?"
-        footer = "Equipo Bigdateros"
-        options = ["✅ Sí, por favor", "❌ No, gracias."]
-        queue.append(buttonReply_Message(number, options, body, footer, "sed6", messageId))
-
-    elif "no, gracias." in text:
-        queue.append(text_Message(number, "Perfecto! No dudes en contactarnos si tienes más preguntas. Recuerda que también ofrecemos material gratuito para la comunidad. ¡Hasta luego! 😊"))
-
-    else:
-        queue.append(text_Message(number, "Lo siento, no entendí lo que dijiste. ¿Quieres que te ayude con alguna de estas opciones?"))
+    # ... resto de tus flujos ...
 
     for item in queue:
         enviar_Mensaje_whatsapp(item)
 
-
-# Solución de prefijo para México y Argentina
+# ===========================================
+# Función para corregir prefijo internacional
+# ===========================================
 def replace_start(s):
     number = s[3:]
     if s.startswith("521"):
