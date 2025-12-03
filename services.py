@@ -172,6 +172,19 @@ def administrar_chatbot(text, number, messageId, name):
         options = ["✅ servicios", "📅 agendar cita"]
         queue.append(replyReaction_Message(number, messageId, "🫡"))
         queue.append(buttonReply_Message(number, options, body, footer, "sed1", messageId))
+
+    elif "✅ servicios" in text_lower:
+        body = "Estos son nuestros servicios disponibles:"
+        footer = "Equipo Bigdateros"
+        options = ["Servicio 1", "Servicio 2", "Servicio 3"]
+        queue.append(buttonReply_Message(number, options, body, footer, "serv", messageId))
+
+    elif "📅 agendar cita" in text_lower:
+        body = "Selecciona un día para agendar tu cita:"
+        footer = "Equipo Bigdateros"
+        days = ["Lunes", "Martes", "Miércoles"]
+        queue.append(listReply_Message(number, days, body, footer, "cita", messageId))
+
     else:
         queue.append(text_Message(number, "Lo siento, no entendí tu mensaje. Escribe 'hola' para probar el bot."))
 
