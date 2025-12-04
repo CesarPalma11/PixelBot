@@ -24,6 +24,7 @@
             gap: 12px;
             position: sticky;
             top: 0;
+            z-index: 10;
         }
 
         .topbar a {
@@ -36,42 +37,51 @@
             max-width: 700px;
             margin: auto;
             padding: 20px;
-            padding-bottom: 100px;
+            padding-bottom: 120px;
         }
 
-        /* Mensajes */
-        .message {
-            padding: 10px 14px;
-            border-radius: 14px;
-            margin-bottom: 10px;
-            max-width: 75%;
-            font-size: 15px;
-            line-height: 1.35em;
-            display: inline-block;
-            position: relative;
-            animation: fadeIn 0.2s ease-in-out;
+        /* Cada mensaje va en su propia línea */
+        .message-row {
+            width: 100%;
+            display: flex;
+            margin: 8px 0;
         }
 
         .user {
-            background: #dfffe0;
-            color: #1b331c;
-            margin-left: auto;
-            border-bottom-right-radius: 4px;
+            justify-content: flex-end;
         }
 
         .bot {
+            justify-content: flex-start;
+        }
+
+        /* Burbuja */
+        .message {
+            padding: 10px 14px;
+            border-radius: 14px;
+            max-width: 70%;
+            font-size: 15px;
+            line-height: 1.35em;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        .user .message {
+            background: #dfffe0;
+            color: #1b331c;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot .message {
             background: white;
             color: #222;
-            margin-right: auto;
-            border-bottom-left-radius: 4px;
             border: 1px solid #ececec;
+            border-bottom-left-radius: 4px;
         }
 
         .timestamp {
-            display: block;
-            margin-top: 4px;
             font-size: 11px;
             color: #777;
+            margin-top: 4px;
         }
 
         @keyframes fadeIn {
@@ -79,7 +89,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Caja de envío */
+        /* Input */
         .input-area {
             position: fixed;
             bottom: 0;
@@ -105,9 +115,8 @@
             border: 1px solid #ccc;
             border-radius: 10px;
             font-size: 15px;
-            outline: none;
             background: #f8f8f8;
-            transition: 0.2s;
+            outline: none;
         }
 
         .input-body input[type=text]:focus {
@@ -124,7 +133,6 @@
             border-radius: 10px;
             cursor: pointer;
             font-size: 14px;
-            transition: 0.2s;
         }
 
         button:hover {
@@ -140,16 +148,20 @@
     </div>
 
     <div class="chat-container">
+
         {% if messages %}
             {% for sender, message, timestamp in messages %}
-                <div class="message {{ sender }}">
-                    {{ message }}
-                    <span class="timestamp">{{ timestamp }}</span>
+                <div class="message-row {{ sender }}">
+                    <div class="message">
+                        {{ message }}
+                        <div class="timestamp">{{ timestamp }}</div>
+                    </div>
                 </div>
             {% endfor %}
         {% else %}
             <p>No hay mensajes para este chat.</p>
         {% endif %}
+
     </div>
 
     <form class="input-area" action="/send_message/{{ wa_id }}" method="POST">
