@@ -5,12 +5,17 @@ from database import get_recent_chats, get_chat, save_message, init_db
 
 app = Flask(__name__)
 
+# ==============================
+# INICIALIZAR BASE DE DATOS
+# ==============================
+init_db()  # crea base de datos y tabla si no existen
+
 # Token de verificación del webhook (Meta)
 TOKEN = os.getenv("TOKEN")
 
 
 # ==============================
-#     PANEL — DASHBOARD
+# DASHBOARD — VER CHATS
 # ==============================
 @app.route("/")
 def dashboard():
@@ -25,7 +30,7 @@ def chat_view(wa_id):
 
 
 # ==============================
-#         RUTA TEST
+# RUTA DE TEST
 # ==============================
 @app.route('/bienvenido', methods=['GET'])
 def bienvenido():
@@ -33,7 +38,7 @@ def bienvenido():
 
 
 # ==============================
-#     WEBHOOK — GET
+# WEBHOOK — GET (VERIFICACIÓN)
 # ==============================
 @app.route('/webhook', methods=['GET'])
 def verificar_token():
@@ -57,12 +62,12 @@ def verificar_token():
 
 
 # ==============================
-#     WEBHOOK — POST
+# WEBHOOK — POST (MENSAJES)
 # ==============================
 @app.route('/webhook', methods=['POST'])
 def recibir_mensajes():
     """
-    Recibe mensajes de WhatsApp y los procesa con servicios.py
+    Recibe mensajes de WhatsApp y los procesa con services.py
     """
     try:
         body = request.get_json()
@@ -86,6 +91,7 @@ def recibir_mensajes():
         contacts = value.get('contacts', [{}])[0]
         name = contacts.get('profile', {}).get('name', "")
 
+        # Extraer texto del mensaje
         text = services.obtener_Mensaje_whatsapp(message)
 
         print(f"Procesando mensaje de {number} ({name}): {text}")
@@ -96,7 +102,7 @@ def recibir_mensajes():
         # Responder chatbot
         bot_response = services.administrar_chatbot(text, number, messageId, name)
 
-        # Guardar respuesta del bot SI ES TEXTO
+        # Guardar respuesta del bot si existe y es texto
         if bot_response:
             save_message(number, name, "bot", bot_response)
 
@@ -108,9 +114,8 @@ def recibir_mensajes():
 
 
 # ==============================
-#   INICIAR APP — LOCAL/RENDER
+# INICIAR APP — LOCAL/RENDER
 # ==============================
 if __name__ == '__main__':
-    init_db()  # crea base de datos si no existe
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
