@@ -2,6 +2,7 @@ import requests
 import os
 import json
 import time
+from database import save_message  # <-- Guardar mensajes en DB
 
 # =========================
 # CONFIGURACIÓN DESDE ENV
@@ -11,7 +12,7 @@ PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 WHATSAPP_URL = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
 DOCUMENT_URL = os.getenv("DOCUMENT_URL")
 
-# Stickers (pueden quedar aquí o en env)
+# Stickers
 STICKERS = {
     "poyo_feliz": 984778742532668,
     "perro_traje": 1009219236749949,
@@ -36,14 +37,14 @@ def obtener_Mensaje_whatsapp(message):
     if 'type' not in message:
         return 'mensaje no reconocido'
 
-    typeMessage = message['type']
-    if typeMessage == 'text':
+    t = message['type']
+    if t == 'text':
         return message['text']['body']
-    elif typeMessage == 'button':
+    elif t == 'button':
         return message['button']['text']
-    elif typeMessage == 'interactive' and message['interactive']['type'] == 'list_reply':
+    elif t == 'interactive' and message['interactive']['type'] == 'list_reply':
         return message['interactive']['list_reply']['title']
-    elif typeMessage == 'interactive' and message['interactive']['type'] == 'button_reply':
+    elif t == 'interactive' and message['interactive']['type'] == 'button_reply':
         return message['interactive']['button_reply']['title']
     else:
         return 'mensaje no procesado'
@@ -55,9 +56,9 @@ def enviar_Mensaje_whatsapp(data):
             'Authorization': f'Bearer {WHATSAPP_TOKEN}'
         }
         print("Enviando al API de WhatsApp:", data)
-        response = requests.post(WHATSAPP_URL, headers=headers, data=data)
-        print("Respuesta WhatsApp:", response.status_code, response.text)
-        return response.status_code
+        resp = requests.post(WHATSAPP_URL, headers=headers, data=data)
+        print("Respuesta WhatsApp:", resp.status_code, resp.text)
+        return resp.status_code
     except Exception as e:
         print("Error enviando mensaje:", e)
         return 403
@@ -123,11 +124,6 @@ def sticker_Message(number, sticker_id):
         "sticker": {"id": sticker_id}
     })
 
-def get_media_id(media_name, media_type):
-    if media_type == "sticker":
-        return STICKERS.get(media_name, None)
-    return None
-
 def replyReaction_Message(number, messageId, emoji):
     return json.dumps({
         "messaging_product": "whatsapp",
@@ -162,6 +158,7 @@ def administrar_chatbot(text, number, messageId, name):
     queue = []
     print("Procesando mensaje usuario:", text_lower)
 
+    # Marcar como leído
     queue.append(markRead_Message(messageId))
     time.sleep(0.5)
 
@@ -175,27 +172,18 @@ def administrar_chatbot(text, number, messageId, name):
         queue.append(replyReaction_Message(number, messageId, "🤖"))
         queue.append(buttonReply_Message(number, options, body, footer, "menu_principal", messageId))
 
-    # -----------------
-    # Submenú: Automatizar WhatsApp
-    # -----------------
     elif "automatizar" in text_lower:
         body = "Elige qué tipo de automatización deseas:"
         footer = "Automatizaciones"
         options = ["Chatbot básico", "Respuestas automáticas", "Enviar documentos", "Integraciones externas"]
         queue.append(listReply_Message(number, options, body, footer, "automatizar", messageId))
 
-    # -----------------
-    # Submenú: Crear página web
-    # -----------------
     elif "página web" in text_lower or "crear" in text_lower:
         body = "Selecciona el tipo de página que deseas:"
         footer = "Servicios Web"
         options = ["Landing page", "E-commerce", "Portafolio personal", "Blog / Noticias"]
         queue.append(listReply_Message(number, options, body, footer, "web", messageId))
 
-    # -----------------
-    # Submenú: Soporte / Consultas
-    # -----------------
     elif "soporte" in text_lower or "consultas" in text_lower:
         body = "Elige una opción de soporte:"
         footer = "Soporte PixelBot"
@@ -203,46 +191,49 @@ def administrar_chatbot(text, number, messageId, name):
         queue.append(listReply_Message(number, options, body, footer, "soporte", messageId))
 
     # -----------------
-    # Respuestas específicas para cada opción
+    # Respuestas específicas
     # -----------------
-    elif "chatbot básico" in text_lower:
-        queue.append(text_Message(number, "Un chatbot básico puede responder preguntas frecuentes automáticamente."))
-    elif "respuestas automáticas" in text_lower:
-        queue.append(text_Message(number, "Podemos configurar respuestas automáticas según palabras clave."))
-    elif "enviar documentos" in text_lower:
-        queue.append(text_Message(number, "Puedes enviar documentos automáticamente a tus clientes."))
-    elif "integraciones externas" in text_lower:
-        queue.append(text_Message(number, "Integramos tu WhatsApp con CRM, Google Sheets y más."))
-    elif "landing page" in text_lower:
-        queue.append(text_Message(number, "Creamos páginas simples para promocionar tu negocio."))
-    elif "e-commerce" in text_lower:
-        queue.append(text_Message(number, "Creamos tiendas online completas con carrito de compras."))
-    elif "portafolio personal" in text_lower:
-        queue.append(text_Message(number, "Diseñamos un portafolio profesional para mostrar tus proyectos."))
-    elif "blog / noticias" in text_lower:
-        queue.append(text_Message(number, "Creamos blogs para publicar noticias y artículos fácilmente."))
-    elif "precios" in text_lower:
-        queue.append(text_Message(number, "Nuestros precios varían según el servicio, contáctanos para más info."))
-    elif "horarios" in text_lower:
-        queue.append(text_Message(number, "Atendemos de lunes a viernes de 9 a 18 hs."))
-    elif "contacto directo" in text_lower:
-        queue.append(text_Message(number, "Puedes escribirnos a contacto@bigdateros.com o llamar al +54 9 11 6018-5717"))
+    response_map = {
+        "chatbot básico": "Un chatbot básico puede responder preguntas frecuentes automáticamente.",
+        "respuestas automáticas": "Podemos configurar respuestas automáticas según palabras clave.",
+        "enviar documentos": "Puedes enviar documentos automáticamente a tus clientes.",
+        "integraciones externas": "Integramos tu WhatsApp con CRM, Google Sheets y más.",
+        "landing page": "Creamos páginas simples para promocionar tu negocio.",
+        "e-commerce": "Creamos tiendas online completas con carrito de compras.",
+        "portafolio personal": "Diseñamos un portafolio profesional para mostrar tus proyectos.",
+        "blog / noticias": "Creamos blogs para publicar noticias y artículos fácilmente.",
+        "precios": "Nuestros precios varían según el servicio, contáctanos para más info.",
+        "horarios": "Atendemos de lunes a viernes de 9 a 18 hs.",
+        "contacto directo": "Puedes escribirnos a contacto@bigdateros.com o llamar al +54 9 11 6018-5717"
+    }
+
+    if text_lower in response_map:
+        resp = response_map[text_lower]
+        queue.append(text_Message(number, resp))
 
     # -----------------
-    # Mensaje fallback
+    # Fallback
     # -----------------
-    else:
+    if not queue:
         queue.append(text_Message(number, "Lo siento, no entendí tu mensaje. Escribe 'hola' para comenzar."))
 
     # -----------------
-    # Enviar todos los mensajes
+    # Enviar y guardar todos los mensajes en DB
     # -----------------
     for item in queue:
         enviar_Mensaje_whatsapp(item)
+        # Guardar respuesta del bot en DB si es texto
+        try:
+            data_json = json.loads(item)
+            if data_json.get("type") == "text":
+                save_message(number, name, "bot", data_json["text"]["body"])
+        except:
+            pass
 
+    return True
 
 # =========================
-# FUNCIÓN AUXILIAR
+# AUXILIAR
 # =========================
 def replace_start(s):
     number = s[3:]
