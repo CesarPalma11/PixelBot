@@ -4,39 +4,160 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat con {{ wa_id }} — PixelBot</title>
-    <link rel="stylesheet" href="/static/styles.css">
+
     <style>
-        .chat-container { max-width: 600px; margin: auto; }
-        .message { padding: 8px 12px; margin: 5px 0; border-radius: 10px; max-width: 80%; }
-        .user { background-color: #dcf8c6; text-align: right; margin-left: auto; }
-        .bot { background-color: #ececec; text-align: left; margin-right: auto; }
-        .timestamp { font-size: 0.8em; color: #666; }
-        form { margin-top: 20px; display: flex; gap: 5px; }
-        input[type=text] { flex: 1; padding: 8px; }
-        button { padding: 8px 12px; }
+        body {
+            margin: 0;
+            font-family: "Inter", Arial, sans-serif;
+            background: #f5f6f8;
+            color: #333;
+        }
+
+        .topbar {
+            background: white;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+        }
+
+        .topbar a {
+            color: #777;
+            text-decoration: none;
+            font-size: 20px;
+        }
+
+        .chat-container {
+            max-width: 700px;
+            margin: auto;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+
+        /* Mensajes */
+        .message {
+            padding: 10px 14px;
+            border-radius: 14px;
+            margin-bottom: 10px;
+            max-width: 75%;
+            font-size: 15px;
+            line-height: 1.35em;
+            display: inline-block;
+            position: relative;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        .user {
+            background: #dfffe0;
+            color: #1b331c;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot {
+            background: white;
+            color: #222;
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+            border: 1px solid #ececec;
+        }
+
+        .timestamp {
+            display: block;
+            margin-top: 4px;
+            font-size: 11px;
+            color: #777;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Caja de envío */
+        .input-area {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 12px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: center;
+        }
+
+        .input-body {
+            max-width: 700px;
+            width: 100%;
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-body input[type=text] {
+            flex: 1;
+            padding: 12px 14px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            font-size: 15px;
+            outline: none;
+            background: #f8f8f8;
+            transition: 0.2s;
+        }
+
+        .input-body input[type=text]:focus {
+            border-color: #6ea8fe;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(110,168,254,0.25);
+        }
+
+        button {
+            padding: 12px 18px;
+            background: #4d7bff;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #3f6aec;
+        }
     </style>
 </head>
 <body>
-    <div class="chat-container">
-        <h1>Chat con {{ wa_id }}</h1>
 
+    <div class="topbar">
+        <a href="/">←</a>
+        Chat con {{ wa_id }}
+    </div>
+
+    <div class="chat-container">
         {% if messages %}
             {% for sender, message, timestamp in messages %}
-            <div class="message {{ sender }}">
-                <p>{{ message }}</p>
-                <div class="timestamp">{{ timestamp }}</div>
-            </div>
+                <div class="message {{ sender }}">
+                    {{ message }}
+                    <span class="timestamp">{{ timestamp }}</span>
+                </div>
             {% endfor %}
         {% else %}
             <p>No hay mensajes para este chat.</p>
         {% endif %}
+    </div>
 
-        <form action="/send_message/{{ wa_id }}" method="POST">
+    <form class="input-area" action="/send_message/{{ wa_id }}" method="POST">
+        <div class="input-body">
             <input type="text" name="text" placeholder="Escribe un mensaje..." required>
             <button type="submit">Enviar</button>
-        </form>
+        </div>
+    </form>
 
-        <p><a href="/">⬅ Volver al dashboard</a></p>
-    </div>
 </body>
 </html>
