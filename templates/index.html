@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel PixelBot — Chats</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+    <div class="navbar">
+        PixelBot — Panel de Conversaciones
+    </div>
+
+    <div class="container">
+        <h2>Chats recientes</h2>
+        <div class="chat-list">
+            {% for chat in chats %}
+            <div class="chat-item">
+                <a href="/chat/{{ chat.wa_id }}">
+                    📱 {{ chat.name }} ({{ chat.wa_id }})
+                </a>
+                <span class="chat-date">{{ chat.last_message_time }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</body>
+</html>

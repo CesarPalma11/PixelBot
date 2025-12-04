@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat con {{ wa_id }} — PixelBot</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+    <div class="navbar">
+        PixelBot — Conversación
+    </div>
+
+    <div class="container">
+
+        <a href="/" class="back-button">⬅ Volver</a>
+
+        <h2>Chat con {{ wa_id }}</h2>
+
+        <div class="chat-box">
+            {% for msg in messages %}
+                <div class="message {% if msg.sender == 'user' %}user{% else %}bot{% endif %}">
+                    {{ msg.text }}
+                    <div class="timestamp">{{ msg.timestamp }}</div>
+                </div>
+            {% endfor %}
+        </div>
+
+    </div>
+
+</body>
+</html>
