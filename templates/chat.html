@@ -7,27 +7,29 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+    <h1>PixelBot Dashboard</h1>
 
-    <div class="navbar">
-        PixelBot — Conversación
-    </div>
-
-    <div class="container">
-
-        <a href="/" class="back-button">⬅ Volver</a>
-
-        <h2>Chat con {{ wa_id }}</h2>
-
-        <div class="chat-box">
-            {% for msg in messages %}
-                <div class="message {% if msg.sender == 'user' %}user{% else %}bot{% endif %}">
-                    {{ msg.text }}
-                    <div class="timestamp">{{ msg.timestamp }}</div>
-                </div>
-            {% endfor %}
-        </div>
-
-    </div>
-
+    {% if chats %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>WhatsApp ID</th>
+                    <th>Último mensaje</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for wa_id, name, last_msg in chats %}
+                <tr>
+                    <td><a href="/chat/{{ wa_id }}">{{ name }}</a></td>
+                    <td>{{ wa_id }}</td>
+                    <td>{{ last_msg }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="empty">No hay chats recientes.</p>
+    {% endif %}
 </body>
 </html>
