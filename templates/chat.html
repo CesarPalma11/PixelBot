@@ -5,31 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat con {{ wa_id }} — PixelBot</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .chat-container { max-width: 600px; margin: auto; }
+        .message { padding: 8px 12px; margin: 5px 0; border-radius: 10px; max-width: 80%; }
+        .user { background-color: #dcf8c6; text-align: right; margin-left: auto; }
+        .bot { background-color: #ececec; text-align: left; margin-right: auto; }
+        .timestamp { font-size: 0.8em; color: #666; }
+        form { margin-top: 20px; display: flex; gap: 5px; }
+        input[type=text] { flex: 1; padding: 8px; }
+        button { padding: 8px 12px; }
+    </style>
 </head>
 <body>
-    <h1>PixelBot Dashboard</h1>
+    <div class="chat-container">
+        <h1>Chat con {{ wa_id }}</h1>
 
-    {% if chats %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>WhatsApp ID</th>
-                    <th>Último mensaje</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for wa_id, name, last_msg in chats %}
-                <tr>
-                    <td><a href="/chat/{{ wa_id }}">{{ name }}</a></td>
-                    <td>{{ wa_id }}</td>
-                    <td>{{ last_msg }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p class="empty">No hay chats recientes.</p>
-    {% endif %}
+        {% if messages %}
+            {% for sender, message, timestamp in messages %}
+            <div class="message {{ sender }}">
+                <p>{{ message }}</p>
+                <div class="timestamp">{{ timestamp }}</div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>No hay mensajes para este chat.</p>
+        {% endif %}
+
+        <form action="/send_message/{{ wa_id }}" method="POST">
+            <input type="text" name="text" placeholder="Escribe un mensaje..." required>
+            <button type="submit">Enviar</button>
+        </form>
+
+        <p><a href="/">⬅ Volver al dashboard</a></p>
+    </div>
 </body>
 </html>

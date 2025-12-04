@@ -14,16 +14,20 @@
 
     <div class="container">
         <h2>Chats recientes</h2>
-        <div class="chat-list">
-            {% for chat in chats %}
-            <div class="chat-item">
-                <a href="/chat/{{ chat.wa_id }}">
-                    📱 {{ chat.name }} ({{ chat.wa_id }})
-                </a>
-                <span class="chat-date">{{ chat.last_message_time }}</span>
+        {% if chats %}
+            <div class="chat-list">
+                {% for wa_id, name, last_msg in chats %}
+                <div class="chat-item">
+                    <a href="/chat/{{ wa_id }}">
+                        📱 {{ name }} ({{ wa_id }})
+                    </a>
+                    <span class="chat-date">{{ last_msg }}</span>
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
+        {% else %}
+            <p>No hay chats recientes.</p>
+        {% endif %}
     </div>
 
 </body>
