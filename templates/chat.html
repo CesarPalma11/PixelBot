@@ -172,4 +172,33 @@
     </form>
 
 </body>
+
+<script>
+async function refreshChat() {
+    const res = await fetch("/api/chat/{{ wa_id }}/messages");
+    const data = await res.json();
+
+    const container = document.querySelector(".chat-container");
+    container.innerHTML = "";
+
+    data.messages.forEach(msg => {
+        const row = document.createElement("div");
+        row.classList.add("message-row", msg.sender);
+
+        row.innerHTML = `
+            <div class="message">
+                ${msg.message}
+                <div class="timestamp">${msg.timestamp}</div>
+            </div>
+        `;
+        container.appendChild(row);
+    });
+
+    // Auto scroll
+    window.scrollTo(0, document.body.scrollHeight);
+}
+
+// refresca cada 2 segundos
+setInterval(refreshChat, 2000);
+</script>
 </html>

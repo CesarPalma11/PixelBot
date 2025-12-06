@@ -64,6 +64,18 @@ def bienvenido():
 # ==============================
 #     WEBHOOK — GET (Verificación)
 # ==============================
+
+#ENDPOINT
+@app.route("/api/chat/<wa_id>/messages")
+def api_get_messages(wa_id):
+    messages = get_chat(wa_id)
+    return {"messages": [
+        {"sender": m[0], "message": m[1], "timestamp": m[2]}
+        for m in messages
+    ]}
+
+
+
 @app.route('/webhook', methods=['GET'])
 def verificar_token():
     try:
