@@ -169,11 +169,11 @@
 let lastMessageCount = 0;
 
 async function refreshChat() {
-    const container = document.querySelector(".chat-container");
+   const container = document.querySelector(".chat-container");
 
-    // Verifica si el usuario está al final
-    const isAtBottom =
-        window.scrollY + window.innerHeight >= document.body.scrollHeight - 50;
+// Verifica si el usuario está al final
+const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
+
 
     // Obtener mensajes
     const res = await fetch("/api/chat/{{ wa_id }}/messages");
@@ -207,9 +207,11 @@ async function refreshChat() {
 
     lastMessageCount = messages.length;
 
-    if (isAtBottom) {
-        window.scrollTo(0, document.body.scrollHeight);
+    // Solo hacer scroll si estaba al final
+    if (isAtBottom || justSent) {
+        container.scrollTop = container.scrollHeight;
     }
+
 }
 
 // Formulario: enviar sin recargar
