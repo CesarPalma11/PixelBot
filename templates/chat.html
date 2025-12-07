@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat con {{ wa_id }} — PixelBot</title>
 
+    <!-- Emoji Picker -->
+    <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
+
     <style>
         body {
             margin: 0;
@@ -38,9 +41,11 @@
             margin: auto;
             padding: 20px;
             padding-bottom: 120px;
+            overflow-y: auto;
+            height: calc(100vh - 140px);
         }
 
-        /* FILA DE MENSAJE */
+        /* message rows */
         .message-row {
             display: flex;
             width: 100%;
@@ -55,7 +60,7 @@
             justify-content: flex-end;
         }
 
-        /* BURBUJA */
+        /* bubble */
         .message {
             max-width: 75%;
             padding: 10px 12px;
@@ -65,14 +70,12 @@
             line-height: 1.4;
         }
 
-        /* Usuario (cliente) */
         .message-row.left .message {
             background: #ffffff;
             border: 1px solid #ddd;
             border-bottom-left-radius: 4px;
         }
 
-        /* Admin (tú) y bot */
         .message-row.right .message {
             background: #dcf8c6;
             border-bottom-right-radius: 4px;
@@ -85,7 +88,14 @@
             text-align: right;
         }
 
-        /* Input */
+        /* sticker image */
+        .sticker-img {
+            width: 180px;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        /* Input area */
         .input-area {
             position: fixed;
             bottom: 0;
@@ -103,6 +113,7 @@
             width: 100%;
             display: flex;
             gap: 10px;
+            align-items: center;
         }
 
         .input-body input[type=text] {
@@ -124,6 +135,23 @@
             cursor: pointer;
             font-size: 14px;
         }
+
+        /* Emoji button */
+        #emoji-btn {
+            font-size: 22px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* Emoji panel */
+        emoji-picker {
+            position: fixed;
+            bottom: 70px;
+            right: 20px;
+            z-index: 20;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -133,20 +161,23 @@
         Chat con {{ wa_id }}
     </div>
 
-    <div class="chat-container">
+    <div class="chat-container" id="chat-container">
 
         {% if messages %}
             {% for sender, message, timestamp in messages %}
-                
-                {% if sender == "usuario" %}
-                    {% set side = "left" %}
-                {% else %}
-                    {% set side = "right" %}
-                {% endif %}
+
+                {% set side = "left" if sender == "usuario" else "right" %}
 
                 <div class="message-row {{ side }}">
                     <div class="message">
-                        {{ message }}
+
+                        {% if "[sticker]" in message %}
+                            {% set url = message.replace("[sticker]", "") %}
+                            <img src="{{ url }}" class="sticker-img">
+                        {% else %}
+                            {{ message }}
+                        {% endif %}
+
                         <div class="timestamp">{{ timestamp }}</div>
                     </div>
                 </div>
@@ -158,29 +189,33 @@
 
     </div>
 
+    <!-- Emoji panel -->
+    <emoji-picker id="emoji-panel"></emoji-picker>
+
     <form class="input-area" id="chat-form">
-    <div class="input-body">
-        <input type="text" name="text" placeholder="Escribe un mensaje..." required>
-        <button type="submit">Enviar</button>
-    </div>
-</form>
+        <div class="input-body">
+            <button id="emoji-btn" type="button">😊</button>
+            <input type="text" name="text" id="input-text" placeholder="Escribe un mensaje..." required>
+            <button type="submit">Enviar</button>
+        </div>
+    </form>
 
 <script>
 let lastMessageCount = 0;
+let justSent = false;
 
+// -------------------
+// Refresh chat
+// -------------------
 async function refreshChat() {
-   const container = document.querySelector(".chat-container");
+    const container = document.querySelector(".chat-container");
 
-// Verifica si el usuario está al final
-const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
+    const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
 
-
-    // Obtener mensajes
     const res = await fetch("/api/chat/{{ wa_id }}/messages");
     const data = await res.json();
     const messages = data.messages;
 
-    // Solo agregar mensajes nuevos
     for (let i = lastMessageCount; i < messages.length; i++) {
         const msg = messages[i];
         const side = msg.sender === "usuario" ? "left" : "right";
@@ -193,11 +228,20 @@ const isAtBottom = container.scrollTop + container.clientHeight >= container.scr
             timeZone: 'America/Argentina/Buenos_Aires'
         });
 
+        let content = "";
+
+        if (msg.message.startsWith("[sticker]")) {
+            const url = msg.message.replace("[sticker]", "");
+            content = `<img src="${url}" class="sticker-img">`;
+        } else {
+            content = msg.message;
+        }
+
         const row = document.createElement("div");
         row.classList.add("message-row", side);
         row.innerHTML = `
             <div class="message">
-                ${msg.message}
+                ${content}
                 <div class="timestamp">${time}</div>
             </div>
         `;
@@ -207,20 +251,23 @@ const isAtBottom = container.scrollTop + container.clientHeight >= container.scr
 
     lastMessageCount = messages.length;
 
-    // Solo hacer scroll si estaba al final
     if (isAtBottom || justSent) {
         container.scrollTop = container.scrollHeight;
+        justSent = false;
     }
-
 }
 
-// Formulario: enviar sin recargar
+// -------------------
+// Enviar mensaje
+// -------------------
 const form = document.getElementById("chat-form");
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const input = form.querySelector("input[name=text]");
+    const input = document.getElementById("input-text");
     const text = input.value;
     input.value = "";
+
+    justSent = true;
 
     await fetch(`/send_message/{{ wa_id }}`, {
         method: "POST",
@@ -228,14 +275,27 @@ form.addEventListener("submit", async (e) => {
         body: new URLSearchParams({ text })
     });
 
-    // refrescar inmediatamente
     refreshChat();
 });
 
-// Llamada inicial
-refreshChat();
+// -------------------
+// EMOJI PICKER
+// -------------------
+const emojiBtn = document.getElementById("emoji-btn");
+const emojiPanel = document.getElementById("emoji-panel");
+const textInput = document.getElementById("input-text");
 
-// refresca cada 2 segundos
+emojiBtn.addEventListener("click", () => {
+    emojiPanel.style.display = emojiPanel.style.display === "none" ? "block" : "none";
+});
+
+// insertar emoji en el input
+emojiPanel.addEventListener("emoji-click", (event) => {
+    textInput.value += event.detail.unicode;
+});
+
+// -------------------
+refreshChat();
 setInterval(refreshChat, 2000);
 </script>
 

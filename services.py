@@ -2,7 +2,7 @@ import requests
 import os
 import json
 import time
-from database import save_message  # <-- Guardar mensajes en DB
+from database import save_message  # Guardar mensajes en DB
 
 # =========================
 # CONFIGURACIÓN DESDE ENV
@@ -12,7 +12,7 @@ PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 WHATSAPP_URL = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
 DOCUMENT_URL = os.getenv("DOCUMENT_URL")
 
-# Stickers
+# Stickers predefinidos
 STICKERS = {
     "poyo_feliz": 984778742532668,
     "perro_traje": 1009219236749949,
@@ -30,24 +30,51 @@ STICKERS = {
 }
 
 # =========================
-# FUNCIONES DE MENSAJES
+# FUNCIONES MEDIA
 # =========================
+
+def get_media_url(media_id):
+    url = f"https://graph.facebook.com/v22.0/{media_id}"
+    headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
+    res = requests.get(url, headers=headers).json()
+
+    print("MEDIA URL RESPONSE:", res)
+
+    return res["url"]  # WhatsApp devuelve link temporal
+
+
+# =========================
+# OBTENER MENSAJE SEGÚN TIPO
+# =========================
+
 def obtener_Mensaje_whatsapp(message):
     print("Mensaje recibido raw:", message)
     if 'type' not in message:
         return 'mensaje no reconocido'
 
     t = message['type']
+
     if t == 'text':
         return message['text']['body']
-    elif t == 'button':
+
+    if t == 'sticker':
+        return "[sticker]"
+
+    if t == 'button':
         return message['button']['text']
-    elif t == 'interactive' and message['interactive']['type'] == 'list_reply':
+
+    if t == 'interactive' and message['interactive']['type'] == 'list_reply':
         return message['interactive']['list_reply']['title']
-    elif t == 'interactive' and message['interactive']['type'] == 'button_reply':
+
+    if t == 'interactive' and message['interactive']['type'] == 'button_reply':
         return message['interactive']['button_reply']['title']
-    else:
-        return 'mensaje no procesado'
+
+    return 'mensaje no procesado'
+
+
+# =========================
+# ENVIAR MENSAJES
+# =========================
 
 def enviar_Mensaje_whatsapp(data):
     try:
@@ -63,21 +90,34 @@ def enviar_Mensaje_whatsapp(data):
         print("Error enviando mensaje:", e)
         return 403
 
+
+# =========================
+# FORMATO DE MENSAJES
+# =========================
+
 def text_Message(number, text):
     return json.dumps({
         "messaging_product": "whatsapp",
-        "recipient_type": "individual",
         "to": number,
         "type": "text",
         "text": {"body": text}
     })
+
+
+def sticker_Message(number, sticker_id):
+    return json.dumps({
+        "messaging_product": "whatsapp",
+        "to": number,
+        "type": "sticker",
+        "sticker": {"id": sticker_id}
+    })
+
 
 def buttonReply_Message(number, options, body, footer, sedd, messageId):
     buttons = [{"type": "reply", "reply": {"id": f"{sedd}_btn_{i+1}", "title": option}}
                for i, option in enumerate(options)]
     return json.dumps({
         "messaging_product": "whatsapp",
-        "recipient_type": "individual",
         "to": number,
         "type": "interactive",
         "interactive": {
@@ -88,60 +128,35 @@ def buttonReply_Message(number, options, body, footer, sedd, messageId):
         }
     })
 
+
 def listReply_Message(number, options, body, footer, sedd, messageId):
     rows = [{"id": f"{sedd}_row_{i+1}", "title": option, "description": ""}
             for i, option in enumerate(options)]
+
     return json.dumps({
         "messaging_product": "whatsapp",
-        "recipient_type": "individual",
         "to": number,
         "type": "interactive",
         "interactive": {
             "type": "list",
             "body": {"text": body},
             "footer": {"text": footer},
-            "action": {"button": "Ver Opciones", "sections": [{"title": "Secciones", "rows": rows}]}
+            "action": {
+                "button": "Ver Opciones",
+                "sections": [{"title": "Secciones", "rows": rows}]
+            }
         }
     })
 
-def document_Message(number, url, caption, filename):
-    if url is None:
-        url = DOCUMENT_URL
-    return json.dumps({
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": number,
-        "type": "document",
-        "document": {"url": url, "caption": caption, "filename": filename}
-    })
-
-def sticker_Message(number, sticker_id):
-    return json.dumps({
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": number,
-        "type": "sticker",
-        "sticker": {"id": sticker_id}
-    })
 
 def replyReaction_Message(number, messageId, emoji):
     return json.dumps({
         "messaging_product": "whatsapp",
-        "recipient_type": "individual",
         "to": number,
         "type": "reaction",
         "reaction": {"message_id": messageId, "emoji": emoji}
     })
 
-def replyText_Message(number, messageId, text):
-    return json.dumps({
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": number,
-        "context": {"message_id": messageId},
-        "type": "text",
-        "text": {"body": text}
-    })
 
 def markRead_Message(messageId):
     return json.dumps({
@@ -150,79 +165,54 @@ def markRead_Message(messageId):
         "message_id": messageId
     })
 
+
 # =========================
-# LOGICA DEL CHATBOT
+# LÓGICA PRINCIPAL DEL BOT
 # =========================
+
 def administrar_chatbot(text, number, messageId, name):
+
     text_lower = text.lower()
     queue = []
+
     print("Procesando mensaje usuario:", text_lower)
 
     # Marcar como leído
     queue.append(markRead_Message(messageId))
-    time.sleep(0.5)
+    time.sleep(0.3)
 
-    # -----------------
-    # Mensaje de bienvenida
-    # -----------------
+    # Menú principal
     if "hola" in text_lower:
-        body = "¡Hola! Soy PixelBot 👋, en qué puedo ayudarte?"
-        footer = "Equipo PixelBot"
-        options = ["Automatizar WhatsApp", "Crear página web", "Soporte / Consultas"]
         queue.append(replyReaction_Message(number, messageId, "🤖"))
-        queue.append(buttonReply_Message(number, options, body, footer, "menu_principal", messageId))
+        queue.append(buttonReply_Message(
+            number,
+            ["Automatizar WhatsApp", "Crear página web", "Soporte / Consultas"],
+            "¡Hola! Soy PixelBot 👋 ¿en qué puedo ayudarte?",
+            "Equipo PixelBot",
+            "menu_principal",
+            messageId
+        ))
 
-    elif "automatizar" in text_lower:
-        body = "Elige qué tipo de automatización deseas:"
-        footer = "Automatizaciones"
-        options = ["Chatbot básico", "Respuestas automáticas", "Enviar documentos", "Integraciones externas"]
-        queue.append(listReply_Message(number, options, body, footer, "automatizar", messageId))
-
-    elif "página web" in text_lower or "crear" in text_lower:
-        body = "Selecciona el tipo de página que deseas:"
-        footer = "Servicios Web"
-        options = ["Landing page", "E-commerce", "Portafolio personal", "Blog / Noticias"]
-        queue.append(listReply_Message(number, options, body, footer, "web", messageId))
-
-    elif "soporte" in text_lower or "consultas" in text_lower:
-        body = "Elige una opción de soporte:"
-        footer = "Soporte PixelBot"
-        options = ["Precios", "Horarios de atención", "Contacto directo"]
-        queue.append(listReply_Message(number, options, body, footer, "soporte", messageId))
-
-    # -----------------
-    # Respuestas específicas
-    # -----------------
+    # Respuestas simples
     response_map = {
-        "chatbot básico": "Un chatbot básico puede responder preguntas frecuentes automáticamente.",
+        "automatizar whatsapp": "Podemos automatizar tu WhatsApp con bots, respuestas rápidas y más.",
+        "chatbot básico": "Un chatbot básico responde preguntas frecuentes automáticamente.",
         "respuestas automáticas": "Podemos configurar respuestas automáticas según palabras clave.",
-        "enviar documentos": "Puedes enviar documentos automáticamente a tus clientes.",
-        "integraciones externas": "Integramos tu WhatsApp con CRM, Google Sheets y más.",
-        "landing page": "Creamos páginas simples para promocionar tu negocio.",
-        "e-commerce": "Creamos tiendas online completas con carrito de compras.",
-        "portafolio personal": "Diseñamos un portafolio profesional para mostrar tus proyectos.",
-        "blog / noticias": "Creamos blogs para publicar noticias y artículos fácilmente.",
-        "precios": "Nuestros precios varían según el servicio, contáctanos para más info.",
-        "horarios": "Atendemos de lunes a viernes de 9 a 18 hs.",
-        "contacto directo": "Puedes escribirnos a contacto@bigdateros.com o llamar al +54 9 11 6018-5717"
+        "crear página web": "Creamos sitios web modernos y rápidos para tu negocio.",
+        "soporte": "Estoy aquí para ayudarte. ¿Qué necesitas saber?",
     }
 
     if text_lower in response_map:
-        resp = response_map[text_lower]
-        queue.append(text_Message(number, resp))
+        queue.append(text_Message(number, response_map[text_lower]))
 
-    # -----------------
     # Fallback
-    # -----------------
     if not queue:
-        queue.append(text_Message(number, "Lo siento, no entendí tu mensaje. Escribe 'hola' para comenzar."))
+        queue.append(text_Message(number, "No entendí tu mensaje. Escribe *hola* para ver el menú."))
 
-    # -----------------
-    # Enviar y guardar todos los mensajes en DB
-    # -----------------
+    # Enviar y guardar respuestas
     for item in queue:
         enviar_Mensaje_whatsapp(item)
-        # Guardar respuesta del bot en DB si es texto
+
         try:
             data_json = json.loads(item)
             if data_json.get("type") == "text":
@@ -232,9 +222,11 @@ def administrar_chatbot(text, number, messageId, name):
 
     return True
 
+
 # =========================
 # AUXILIAR
 # =========================
+
 def replace_start(s):
     number = s[3:]
     if s.startswith("521"):
