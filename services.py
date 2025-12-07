@@ -48,30 +48,44 @@ def get_media_url(media_id):
 # =========================
 
 def obtener_Mensaje_whatsapp(message):
-    print("Mensaje recibido raw:", message)
-    if 'type' not in message:
-        return 'mensaje no reconocido'
+    print("MENSAJE RAW >>>", json.dumps(message, indent=2))
 
-    t = message['type']
+    if "type" not in message:
+        return "mensaje no reconocido"
 
-    if t == 'text':
-        return message['text']['body']
+    t = message["type"]
 
-    if t == 'sticker':
-        media_id = message["sticker"]["id"]
-        url = get_media_url(media_id)
-        return f"[sticker]{url}"
+    # TEXTO
+    if t == "text":
+        return message["text"]["body"]
 
-    if t == 'button':
-        return message['button']['text']
+    # STICKER
+    if t == "sticker":
+        try:
+            media_id = message["sticker"]["id"]
+            print("STICKER MEDIA_ID:", media_id)
 
-    if t == 'interactive' and message['interactive']['type'] == 'list_reply':
-        return message['interactive']['list_reply']['title']
+            url = get_media_url(media_id)
+            print("STICKER URL OBTENIDA:", url)
 
-    if t == 'interactive' and message['interactive']['type'] == 'button_reply':
-        return message['interactive']['button_reply']['title']
+            return f"[sticker]{url}"
+        except Exception as e:
+            print("ERROR AL PROCESAR STICKER:", e)
+            return "[sticker]error"
 
-    return 'mensaje no procesado'
+    # BOTONES
+    if t == "button":
+        return message["button"]["text"]
+
+    # LISTAS
+    if t == "interactive":
+        it = message["interactive"]
+        if it["type"] == "list_reply":
+            return it["list_reply"]["title"]
+        if it["type"] == "button_reply":
+            return it["button_reply"]["title"]
+
+    return "mensaje no procesado"
 
 
 # =========================
