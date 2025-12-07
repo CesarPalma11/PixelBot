@@ -166,6 +166,8 @@
     </form>
 
 <script>
+let lastMessageCount = 0;
+
 async function refreshChat() {
     const container = document.querySelector(".chat-container");
 
@@ -177,14 +179,15 @@ async function refreshChat() {
     const res = await fetch("/api/chat/{{ wa_id }}/messages");
     const data = await res.json();
 
-    // Guardar scroll actual
-    const oldScrollTop = window.scrollY;
+    const messages = data.messages;
 
-    // Limpiar y volver a renderizar mensajes
-    container.innerHTML = "";
-
-    data.messages.forEach(msg => {
+    // Solo agregar mensajes nuevos
+    for (let i = lastMessageCount; i < messages.length; i++) {
+        const msg = messages[i];
         const side = msg.sender === "usuario" ? "left" : "right";
+
+        // Formatear timestamp: solo hora y minutos
+        const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
         const row = document.createElement("div");
         row.classList.add("message-row", side);
@@ -192,23 +195,27 @@ async function refreshChat() {
         row.innerHTML = `
             <div class="message">
                 ${msg.message}
-                <div class="timestamp">${msg.timestamp}</div>
+                <div class="timestamp">${time}</div>
             </div>
         `;
 
         container.appendChild(row);
-    });
+    }
 
-    // Restaurar scroll según corresponda
+    // Actualizar el contador
+    lastMessageCount = messages.length;
+
+    // Auto scroll si estábamos al final
     if (isAtBottom) {
         window.scrollTo(0, document.body.scrollHeight);
-    } else {
-        window.scrollTo(0, oldScrollTop);
     }
 }
 
 // refresca cada 2 segundos
 setInterval(refreshChat, 2000);
+
+// Al cargar la página por primera vez
+refreshChat();
 
 </script>
 
