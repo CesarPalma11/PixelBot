@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 import os
-
+import pytz
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -27,15 +27,17 @@ def init_db():
     conn.commit()
     conn.close()
 
+ARG_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
+
 def save_message(wa_id, name, sender, message):
+    # Timestamp en Argentina
+    timestamp_local = datetime.now(ARG_TZ).isoformat()
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-
     cursor.execute("""
         INSERT INTO messages (wa_id, name, sender, message, timestamp)
         VALUES (?, ?, ?, ?, ?)
-    """, (wa_id, name, sender, message, datetime.now().isoformat()))
-
+    """, (wa_id, name, sender, message, timestamp_local))
     conn.commit()
     conn.close()
 

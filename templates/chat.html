@@ -187,12 +187,13 @@ async function refreshChat() {
         const side = msg.sender === "usuario" ? "left" : "right";
 
         // Formatear timestamp: solo hora y minutos en Argentina
-        const time = new Date(msg.timestamp).toLocaleTimeString("es-AR", {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-            timeZone: 'America/Argentina/Buenos_Aires'
-        });
+        const date = new Date(msg.timestamp + ""); // fuerza a string
+const time = date.toLocaleTimeString("es-AR", {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'America/Argentina/Buenos_Aires'
+});
 
         const row = document.createElement("div");
         row.classList.add("message-row", side);
