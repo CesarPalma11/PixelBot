@@ -167,14 +167,23 @@
 
 <script>
 async function refreshChat() {
+    const container = document.querySelector(".chat-container");
+
+    // Verifica si el usuario está al final
+    const isAtBottom =
+        window.scrollY + window.innerHeight >= document.body.scrollHeight - 50;
+
+    // Obtener mensajes
     const res = await fetch("/api/chat/{{ wa_id }}/messages");
     const data = await res.json();
 
-    const container = document.querySelector(".chat-container");
+    // Guardar scroll actual
+    const oldScrollTop = window.scrollY;
+
+    // Limpiar y volver a renderizar mensajes
     container.innerHTML = "";
 
     data.messages.forEach(msg => {
-        
         const side = msg.sender === "usuario" ? "left" : "right";
 
         const row = document.createElement("div");
@@ -190,10 +199,17 @@ async function refreshChat() {
         container.appendChild(row);
     });
 
-    window.scrollTo(0, document.body.scrollHeight);
+    // Restaurar scroll según corresponda
+    if (isAtBottom) {
+        window.scrollTo(0, document.body.scrollHeight);
+    } else {
+        window.scrollTo(0, oldScrollTop);
+    }
 }
 
+// refresca cada 2 segundos
 setInterval(refreshChat, 2000);
+
 </script>
 
 </body>
