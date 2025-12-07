@@ -8,7 +8,8 @@ app = Flask(__name__)
 # ==============================
 #   INICIALIZAR BASE DE DATOS
 # ==============================
-init_db()  # Se ejecuta siempre, incluso en Render
+init_db()  # Se ejecuta siempre
+
 
 # ==============================
 #     TOKEN WEBHOOK
@@ -40,17 +41,29 @@ def chat_view(wa_id):
 @app.route("/send_message/<wa_id>", methods=["POST"])
 def send_message_panel(wa_id):
     text = request.form.get("text")
-    messages = get_chat(wa_id)
-    name = messages[-1][1] if messages else "Usuario"
 
     # Crear mensaje JSON para WhatsApp
     data = services.text_Message(wa_id, text)
     services.enviar_Mensaje_whatsapp(data)
 
-    # Guardamos solo el mensaje del USUARIO
-    save_message(wa_id, name, "usuario", text)
-    
+    # Guardar mensaje del ADMIN
+    save_message(wa_id, "Admin", "admin", text)
+
     return redirect(url_for("chat_view", wa_id=wa_id))
+
+
+# ==============================
+#     API PARA REFRESH DEL CHAT
+# ==============================
+@app.route("/api/chat/<wa_id>/messages")
+def api_get_messages(wa_id):
+    messages = get_chat(wa_id)
+    return {
+        "messages": [
+            {"sender": m[0], "message": m[1], "timestamp": m[2]}
+            for m in messages
+        ]
+    }
 
 
 # ==============================
@@ -62,21 +75,9 @@ def bienvenido():
 
 
 # ==============================
-#     WEBHOOK — GET (Verificación)
+#     WEBHOOK — GET (verificación)
 # ==============================
-
-#ENDPOINT
-@app.route("/api/chat/<wa_id>/messages")
-def api_get_messages(wa_id):
-    messages = get_chat(wa_id)
-    return {"messages": [
-        {"sender": m[0], "message": m[1], "timestamp": m[2]}
-        for m in messages
-    ]}
-
-
-
-@app.route('/webhook', methods=['GET'])
+@app.route("/webhook", methods=["GET"])
 def verificar_token():
     try:
         token = request.args.get('hub.verify_token')
@@ -95,9 +96,9 @@ def verificar_token():
 
 
 # ==============================
-#     WEBHOOK — POST (Recibir mensajes)
+#     WEBHOOK — POST (mensajes entrantes)
 # ==============================
-@app.route('/webhook', methods=['POST'])
+@app.route("/webhook", methods=["POST"])
 def recibir_mensajes():
     """
     Recibe mensajes de WhatsApp y los procesa con services.py
@@ -115,7 +116,7 @@ def recibir_mensajes():
             print("No hay mensajes en el payload.")
             return 'No hay mensajes', 200
 
-        # Datos del mensaje
+        # Información del mensaje
         message = messages[0]
         number = message.get('from')
         number = services.replace_start(number)
@@ -131,7 +132,7 @@ def recibir_mensajes():
         # Guardar mensaje del usuario
         save_message(number, name, "usuario", text)
 
-        # Responder chatbot
+        # Procesar chatbot
         services.administrar_chatbot(text, number, messageId, name)
 
         return 'enviado', 200
@@ -142,8 +143,8 @@ def recibir_mensajes():
 
 
 # ==============================
-#   INICIAR APP — LOCAL/RENDER
+#   INICIAR APP LOCAL/RENDER
 # ==============================
-if __name__ == '__main__':
+if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)

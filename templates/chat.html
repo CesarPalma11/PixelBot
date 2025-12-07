@@ -40,53 +40,49 @@
             padding-bottom: 120px;
         }
 
-        /* Cada mensaje va en su propia línea */
+        /* FILA DE MENSAJE */
         .message-row {
-            width: 100%;
             display: flex;
-            margin: 8px 0;
+            width: 100%;
+            margin: 6px 0;
         }
 
-        .user {
-            justify-content: flex-end;
-        }
-
-        .bot {
+        .message-row.left {
             justify-content: flex-start;
         }
 
-        /* Burbuja */
+        .message-row.right {
+            justify-content: flex-end;
+        }
+
+        /* BURBUJA */
         .message {
-            padding: 10px 14px;
-            border-radius: 14px;
-            max-width: 70%;
-            font-size: 15px;
-            line-height: 1.35em;
-            
+            max-width: 75%;
+            padding: 10px 12px;
+            border-radius: 12px;
+            position: relative;
+            font-size: 14px;
+            line-height: 1.4;
         }
 
-        .user .message {
-            background: #dfffe0;
-            color: #1b331c;
-            border-bottom-right-radius: 4px;
-        }
-
-        .bot .message {
-            background: white;
-            color: #222;
-            border: 1px solid #ececec;
+        /* Usuario (cliente) */
+        .message-row.left .message {
+            background: #ffffff;
+            border: 1px solid #ddd;
             border-bottom-left-radius: 4px;
+        }
+
+        /* Admin (tú) y bot */
+        .message-row.right .message {
+            background: #dcf8c6;
+            border-bottom-right-radius: 4px;
         }
 
         .timestamp {
             font-size: 11px;
             color: #777;
             margin-top: 4px;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
+            text-align: right;
         }
 
         /* Input */
@@ -119,12 +115,6 @@
             outline: none;
         }
 
-        .input-body input[type=text]:focus {
-            border-color: #6ea8fe;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(110,168,254,0.25);
-        }
-
         button {
             padding: 12px 18px;
             background: #4d7bff;
@@ -133,10 +123,6 @@
             border-radius: 10px;
             cursor: pointer;
             font-size: 14px;
-        }
-
-        button:hover {
-            background: #3f6aec;
         }
     </style>
 </head>
@@ -151,12 +137,20 @@
 
         {% if messages %}
             {% for sender, message, timestamp in messages %}
-                <div class="message-row {{ sender }}">
+                
+                {% if sender == "usuario" %}
+                    {% set side = "left" %}
+                {% else %}
+                    {% set side = "right" %}
+                {% endif %}
+
+                <div class="message-row {{ side }}">
                     <div class="message">
                         {{ message }}
                         <div class="timestamp">{{ timestamp }}</div>
                     </div>
                 </div>
+
             {% endfor %}
         {% else %}
             <p>No hay mensajes para este chat.</p>
@@ -171,8 +165,6 @@
         </div>
     </form>
 
-</body>
-
 <script>
 async function refreshChat() {
     const res = await fetch("/api/chat/{{ wa_id }}/messages");
@@ -182,8 +174,11 @@ async function refreshChat() {
     container.innerHTML = "";
 
     data.messages.forEach(msg => {
+        
+        const side = msg.sender === "usuario" ? "left" : "right";
+
         const row = document.createElement("div");
-        row.classList.add("message-row", msg.sender);
+        row.classList.add("message-row", side);
 
         row.innerHTML = `
             <div class="message">
@@ -191,14 +186,15 @@ async function refreshChat() {
                 <div class="timestamp">${msg.timestamp}</div>
             </div>
         `;
+
         container.appendChild(row);
     });
 
-    // Auto scroll
     window.scrollTo(0, document.body.scrollHeight);
 }
 
-// refresca cada 2 segundos
 setInterval(refreshChat, 2000);
 </script>
+
+</body>
 </html>
