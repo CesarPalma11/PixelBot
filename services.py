@@ -58,7 +58,9 @@ def obtener_Mensaje_whatsapp(message):
         return message['text']['body']
 
     if t == 'sticker':
-        return "[sticker]"
+        media_id = message["sticker"]["id"]
+        url = get_media_url(media_id)
+        return f"[sticker]{url}"
 
     if t == 'button':
         return message['button']['text']
