@@ -186,8 +186,13 @@ async function refreshChat() {
         const msg = messages[i];
         const side = msg.sender === "usuario" ? "left" : "right";
 
-        // Formatear timestamp: solo hora y minutos
-        const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        // Formatear timestamp: solo hora y minutos en Argentina
+        const time = new Date(msg.timestamp).toLocaleTimeString("es-AR", {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: 'America/Argentina/Buenos_Aires'
+        });
 
         const row = document.createElement("div");
         row.classList.add("message-row", side);
@@ -211,11 +216,12 @@ async function refreshChat() {
     }
 }
 
+// Llamada inicial
+refreshChat();
+
 // refresca cada 2 segundos
 setInterval(refreshChat, 2000);
 
-// Al cargar la página por primera vez
-refreshChat();
 
 </script>
 
