@@ -158,12 +158,12 @@
 
     </div>
 
-    <form class="input-area" action="/send_message/{{ wa_id }}" method="POST">
-        <div class="input-body">
-            <input type="text" name="text" placeholder="Escribe un mensaje..." required>
-            <button type="submit">Enviar</button>
-        </div>
-    </form>
+    <form class="input-area" id="chat-form">
+    <div class="input-body">
+        <input type="text" name="text" placeholder="Escribe un mensaje..." required>
+        <button type="submit">Enviar</button>
+    </div>
+</form>
 
 <script>
 let lastMessageCount = 0;
@@ -178,7 +178,6 @@ async function refreshChat() {
     // Obtener mensajes
     const res = await fetch("/api/chat/{{ wa_id }}/messages");
     const data = await res.json();
-
     const messages = data.messages;
 
     // Solo agregar mensajes nuevos
@@ -186,18 +185,16 @@ async function refreshChat() {
         const msg = messages[i];
         const side = msg.sender === "usuario" ? "left" : "right";
 
-        // Formatear timestamp: solo hora y minutos en Argentina
-        const date = new Date(msg.timestamp + ""); // fuerza a string
-const time = date.toLocaleTimeString("es-AR", {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'America/Argentina/Buenos_Aires'
-});
+        const date = new Date(msg.timestamp);
+        const time = date.toLocaleTimeString("es-AR", {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: 'America/Argentina/Buenos_Aires'
+        });
 
         const row = document.createElement("div");
         row.classList.add("message-row", side);
-
         row.innerHTML = `
             <div class="message">
                 ${msg.message}
@@ -208,22 +205,36 @@ const time = date.toLocaleTimeString("es-AR", {
         container.appendChild(row);
     }
 
-    // Actualizar el contador
     lastMessageCount = messages.length;
 
-    // Auto scroll si estábamos al final
     if (isAtBottom) {
         window.scrollTo(0, document.body.scrollHeight);
     }
 }
+
+// Formulario: enviar sin recargar
+const form = document.getElementById("chat-form");
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = form.querySelector("input[name=text]");
+    const text = input.value;
+    input.value = "";
+
+    await fetch(`/send_message/{{ wa_id }}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ text })
+    });
+
+    // refrescar inmediatamente
+    refreshChat();
+});
 
 // Llamada inicial
 refreshChat();
 
 // refresca cada 2 segundos
 setInterval(refreshChat, 2000);
-
-
 </script>
 
 </body>
