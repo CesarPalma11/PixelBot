@@ -14,30 +14,33 @@
 
     <div class="container">
         <h2>Chats recientes</h2>
-        {% if chats %}
-            <div class="chat-list">
-                {% for wa_id, name, last_msg in chats %}
-                <div class="chat-item">
-                    <a href="/chat/{{ wa_id }}">
-                        📱 {{ name }} ({{ wa_id }}) 
-                    </a>
-                    <span class="chat-date">{{ last_msg }}</span>
-                </div>
-                {% endfor %}
+
+        <div class="chat-list" id="chat-list">
+            {% for wa_id, name, last_msg in chats %}
+            <div class="chat-item">
+                <a href="/chat/{{ wa_id }}">
+                    📱 {{ name }} ({{ wa_id }})
+                </a>
+                <span class="chat-date">{{ last_msg }}</span>
             </div>
-        {% else %}
-            <p>No hay chats recientes.</p>
-        {% endif %}
+            {% endfor %}
+        </div>
     </div>
 
 </body>
+
 <script>
 async function refreshChats() {
     const res = await fetch("/api/recent_chats");
     const data = await res.json();
 
-    const list = document.querySelector(".chat-list");
-    list.innerHTML = "";
+    const list = document.getElementById("chat-list");
+    list.innerHTML = ""; // Limpiar lista
+
+    if (!data.chats || data.chats.length === 0) {
+        list.innerHTML = "<p>No hay chats recientes.</p>";
+        return;
+    }
 
     data.chats.forEach(c => {
         const item = document.createElement("div");
@@ -52,7 +55,11 @@ async function refreshChats() {
     });
 }
 
+// 🔄 Actualizar cada 2 segundos
 setInterval(refreshChats, 2000);
+
+// Cargar al entrar
+refreshChats();
 </script>
 
 </html>
