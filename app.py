@@ -1,150 +1,166 @@
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, jsonify, render_template, redirect, make_response
+import requests
+from database import init_db, save_message, get_recent_chats, get_chat
 import os
-import services
-from database import get_recent_chats, get_chat, save_message, init_db
 
 app = Flask(__name__)
+init_db()
 
-# ==============================
-#   INICIALIZAR BASE DE DATOS
-# ==============================
-init_db()  # Se ejecuta siempre
-
-
-# ==============================
-#     TOKEN WEBHOOK
-# ==============================
-TOKEN = os.getenv("TOKEN")
+# ---------------------------
+# CONFIG WHATSAPP API
+# ---------------------------
+WHATSAPP_TOKEN = "TU_TOKEN_AQUI"
+WHATSAPP_PHONE_ID = "TU_PHONE_ID_AQUI"
+WHATSAPP_URL = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_ID}/messages"
 
 
-# ==============================
-#     DASHBOARD — Chats recientes
-# ==============================
+# ======================================
+#   HOME → LISTA DE CHATS DEL DASHBOARD
+# ======================================
 @app.route("/")
-def dashboard():
+def index():
     chats = get_recent_chats()
     return render_template("index.html", chats=chats)
 
 
-# ==============================
-#     CHAT VIEW
-# ==============================
+# ======================================
+#   API PARA REFRESCAR LISTA DE CHATS
+# ======================================
+@app.route("/api/recent_chats")
+def api_recent_chats():
+    chats = get_recent_chats()
+    result = []
+
+    for wa_id, name, timestamp in chats:
+        result.append({
+            "wa_id": wa_id,
+            "name": name,
+            "timestamp": timestamp
+        })
+
+    response = make_response(jsonify({"chats": result}))
+    response.headers["Cache-Control"] = "no-store"  # 🔥 IMPORTANTE
+    return response
+
+
+# ======================================
+#   CHAT INDIVIDUAL DEL DASHBOARD
+# ======================================
 @app.route("/chat/<wa_id>")
-def chat_view(wa_id):
+def chat_page(wa_id):
     messages = get_chat(wa_id)
     return render_template("chat.html", wa_id=wa_id, messages=messages)
 
 
-# ==============================
-#     ENVIAR MENSAJE DESDE PANEL
-# ==============================
-@app.route("/send_message/<wa_id>", methods=["POST"])
-def send_message_panel(wa_id):
-    text = request.form.get("text")
-
-    # Crear mensaje JSON para WhatsApp
-    data = services.text_Message(wa_id, text)
-    services.enviar_Mensaje_whatsapp(data)
-
-    # Guardar mensaje del ADMIN
-    save_message(wa_id, "Admin", "admin", text)
-
-    return redirect(url_for("chat_view", wa_id=wa_id))
-
-
-# ==============================
-#     API PARA REFRESH DEL CHAT
-# ==============================
+# ======================================
+#   API PARA REFRESCAR MENSAJES DEL CHAT
+# ======================================
 @app.route("/api/chat/<wa_id>/messages")
-def api_get_messages(wa_id):
-    messages = get_chat(wa_id)
-    return {
-        "messages": [
-            {"sender": m[0], "message": m[1], "timestamp": m[2]}
-            for m in messages
-        ]
+def api_chat_messages(wa_id):
+    data = get_chat(wa_id)
+
+    result = []
+    for sender, message, timestamp in data:
+        result.append({
+            "sender": sender,
+            "message": message,
+            "timestamp": timestamp
+        })
+
+    response = make_response(jsonify({"messages": result}))
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+# ======================================
+#   ENVIAR MENSAJE DESDE EL DASHBOARD
+# ======================================
+@app.route("/send_message/<wa_id>", methods=["POST"])
+def send_message(wa_id):
+    text = request.form.get("text", "")
+
+    if not text:
+        return "Missing text", 400
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": wa_id,
+        "type": "text",
+        "text": {"body": text}
     }
 
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+        "Content-Type": "application/json"
+    }
 
-# ==============================
-#     RUTA DE TEST
-# ==============================
-@app.route('/bienvenido', methods=['GET'])
-def bienvenido():
-    return 'Hola mundo!'
+    requests.post(WHATSAPP_URL, json=payload, headers=headers)
+
+    # Guardar en BD
+    save_message(wa_id, "Administrador", "bot", text)
+
+    return "OK", 200
 
 
-# ==============================
-#     WEBHOOK — GET (verificación)
-# ==============================
-@app.route("/webhook", methods=["GET"])
-def verificar_token():
+# ======================================
+#   WEBHOOK WHATSAPP (RECIBIR MENSAJES)
+# ======================================
+@app.route("/webhook", methods=["GET", "POST"])
+def whatsapp_webhook():
+
+    # ---------------- GET (verificación)
+    if request.method == "GET":
+        mode = request.args.get("hub.mode")
+        token = request.args.get("hub.verify_token")
+        challenge = request.args.get("hub.challenge")
+
+        if mode == "subscribe" and token == "pixelbot_token":
+            return challenge, 200
+
+        return "Error", 403
+
+    # ---------------- POST (mensaje entrante)
+    data = request.get_json()
+
     try:
-        token = request.args.get('hub.verify_token')
-        challenge = request.args.get('hub.challenge')
-
-        if token == TOKEN and challenge is not None:
-            print("Webhook verificado correctamente.")
-            return challenge
-        else:
-            print("Token incorrecto recibido:", token)
-            return 'token incorrecto', 403
-
-    except Exception as e:
-        print("Error verificando token:", e)
-        return str(e), 403
-
-
-# ==============================
-#     WEBHOOK — POST (mensajes entrantes)
-# ==============================
-@app.route("/webhook", methods=["POST"])
-def recibir_mensajes():
-    """
-    Recibe mensajes de WhatsApp y los procesa con services.py
-    """
-    try:
-        body = request.get_json()
-        print("Webhook recibido:", body)
-
-        entry = body.get('entry', [])[0]
-        changes = entry.get('changes', [])[0]
-        value = changes.get('value', {})
-        messages = value.get('messages', [])
+        entry = data["entry"][0]
+        changes = entry["changes"][0]
+        value = changes["value"]
+        messages = value.get("messages", [])
 
         if not messages:
-            print("No hay mensajes en el payload.")
-            return 'No hay mensajes', 200
+            return "No messages", 200
 
-        # Información del mensaje
-        message = messages[0]
-        number = message.get('from')
-        number = services.replace_start(number)
-        messageId = message.get('id')
+        msg = messages[0]
 
-        contacts = value.get('contacts', [{}])[0]
-        name = contacts.get('profile', {}).get('name', "")
+        wa_id = msg["from"]
+        name = value["contacts"][0]["profile"]["name"]
 
-        text = services.obtener_Mensaje_whatsapp(message)
+        # ----- Texto -----
+        if msg["type"] == "text":
+            text = msg["text"]["body"]
+            save_message(wa_id, name, "usuario", text)
 
-        print(f"Procesando mensaje de {number} ({name}): {text}")
+        # ----- Sticker -----
+        elif msg["type"] == "sticker":
+            media_id = msg["sticker"]["id"]
 
-        # Guardar mensaje del usuario
-        save_message(number, name, "usuario", text)
+            media_url = f"https://graph.facebook.com/v17.0/{media_id}"
+            headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
 
-        # Procesar chatbot
-        services.administrar_chatbot(text, number, messageId, name)
+            media_response = requests.get(media_url, headers=headers).json()
+            dl_url = media_response["url"]
 
-        return 'enviado', 200
+            save_message(wa_id, name, "usuario", "[sticker]" + dl_url)
 
     except Exception as e:
-        print("Error procesando mensaje:", e)
-        return 'no enviado: ' + str(e), 500
+        print("ERROR WEBHOOK:", e)
+
+    return "OK", 200
 
 
-# ==============================
-#   INICIAR APP LOCAL/RENDER
-# ==============================
+# ======================================
+#   RUN
+# ======================================
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=5000, debug=True)

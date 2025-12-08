@@ -31,7 +31,7 @@
 
 <script>
 async function refreshChats() {
-    const res = await fetch("/api/recent_chats");
+    const res = await fetch("/api/recent_chats", { cache: "no-store" });
     const data = await res.json();
 
     const list = document.getElementById("chat-list");
