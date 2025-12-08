@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify, render_template, redirect, make_respo
 import requests
 from database import init_db, save_message, get_recent_chats, get_chat
 import os
+from services import administrar_chatbot, obtener_Mensaje_whatsapp, enviar_Mensaje_whatsapp
+
 
 app = Flask(__name__)
 init_db()
@@ -135,29 +137,42 @@ def whatsapp_webhook():
 
         wa_id = msg["from"]
         name = value["contacts"][0]["profile"]["name"]
+        messageId = msg["id"]
 
-        # ----- Texto -----
+        # ============
+        # TEXTO
+        # ============
         if msg["type"] == "text":
             text = msg["text"]["body"]
+
+            # Guardar en DB
             save_message(wa_id, name, "usuario", text)
 
-        # ----- Sticker -----
+            # Ejecutar BOT
+            administrar_chatbot(text, wa_id, messageId, name)
+
+        # ============
+        # STICKER
+        # ============
         elif msg["type"] == "sticker":
             media_id = msg["sticker"]["id"]
 
+            # Obtener URL del sticker
             media_url = f"https://graph.facebook.com/v17.0/{media_id}"
             headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
-
             media_response = requests.get(media_url, headers=headers).json()
             dl_url = media_response["url"]
 
+            # Guardamos en DB
             save_message(wa_id, name, "usuario", "[sticker]" + dl_url)
+
+            # Lógica del bot
+            administrar_chatbot("[sticker]", wa_id, messageId, name)
 
     except Exception as e:
         print("ERROR WEBHOOK:", e)
 
     return "OK", 200
-
 
 # ======================================
 #   RUN

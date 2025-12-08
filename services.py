@@ -9,7 +9,7 @@ from database import save_message  # Guardar mensajes en DB
 # =========================
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
-WHATSAPP_URL = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
+WHATSAPP_URL = f"https://graph.facebook.com/v17.0/{PHONE_NUMBER_ID}/messages"
 DOCUMENT_URL = os.getenv("DOCUMENT_URL")
 
 # Stickers predefinidos
