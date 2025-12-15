@@ -5,7 +5,6 @@ import pytz
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_NAME = os.path.join(BASE_DIR, "pixelbot.db")
-
 ARG_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
 
 
@@ -28,7 +27,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS chat_state (
             wa_id TEXT PRIMARY KEY,
             handoff_human INTEGER DEFAULT 0,
-            handoff_at TEXT
+            handoff_at TEXT,
+            handoff_count INTEGER DEFAULT 0
         )
     """)
 
@@ -37,30 +37,15 @@ def init_db():
 
 
 def save_message(wa_id, name, sender, message):
-    timestamp_local = datetime.now(ARG_TZ).isoformat()
+    ts = datetime.now(ARG_TZ).isoformat()
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO messages (wa_id, name, sender, message, timestamp)
         VALUES (?, ?, ?, ?, ?)
-    """, (wa_id, name, sender, message, timestamp_local))
+    """, (wa_id, name, sender, message, ts))
     conn.commit()
     conn.close()
-
-
-def get_recent_chats():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT wa_id, name, MAX(timestamp)
-        FROM messages
-        GROUP BY wa_id
-        ORDER BY MAX(timestamp) DESC
-        LIMIT 30
-    """)
-    rows = cursor.fetchall()
-    conn.close()
-    return rows
 
 
 def get_chat(wa_id):
@@ -77,6 +62,26 @@ def get_chat(wa_id):
     return rows
 
 
+def get_recent_chats():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT 
+            m.wa_id,
+            m.name,
+            MAX(m.timestamp),
+            COALESCE(c.handoff_human, 0)
+        FROM messages m
+        LEFT JOIN chat_state c ON m.wa_id = c.wa_id
+        GROUP BY m.wa_id
+        ORDER BY MAX(m.timestamp) DESC
+        LIMIT 30
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
 # =====================
 # HANDOFF
 # =====================
@@ -84,19 +89,23 @@ def get_chat(wa_id):
 def set_handoff(wa_id, value: bool):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    now = datetime.utcnow().isoformat()
 
     if value:
-        now = datetime.utcnow().isoformat()
         cursor.execute("""
-            INSERT INTO chat_state (wa_id, handoff_human, handoff_at)
-            VALUES (?, 1, ?)
+            INSERT INTO chat_state (wa_id, handoff_human, handoff_at, handoff_count)
+            VALUES (?, 1, ?, 1)
             ON CONFLICT(wa_id)
-            DO UPDATE SET handoff_human = 1, handoff_at = ?
+            DO UPDATE SET
+                handoff_human = 1,
+                handoff_at = ?,
+                handoff_count = handoff_count + 1
         """, (wa_id, now, now))
     else:
         cursor.execute("""
             UPDATE chat_state
-            SET handoff_human = 0, handoff_at = NULL
+            SET handoff_human = 0,
+                handoff_at = NULL
             WHERE wa_id = ?
         """, (wa_id,))
 
@@ -120,12 +129,11 @@ def is_handoff(wa_id, timeout_hours=12):
     if not row:
         return False
 
-    handoff, handoff_at = row
+    handoff, started = row
 
-    if handoff == 1 and handoff_at:
-        started = datetime.fromisoformat(handoff_at)
-        if datetime.utcnow() - started > timedelta(hours=timeout_hours):
-            # 🔄 Auto-reactivar bot
+    if handoff == 1 and started:
+        t = datetime.fromisoformat(started)
+        if datetime.utcnow() - t > timedelta(hours=timeout_hours):
             set_handoff(wa_id, False)
             return False
 

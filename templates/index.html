@@ -3,63 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel PixelBot — Chats</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <title>PixelBot — Dashboard</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: "Inter", Arial, sans-serif;
+            background: #f5f6f8;
+            color: #333;
+        }
+
+        .navbar {
+            background: white;
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        h2 {
+            margin-bottom: 16px;
+        }
+
+        .chat-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-item {
+            background: white;
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e5e5e5;
+            transition: background 0.2s;
+        }
+
+        .chat-item:hover {
+            background: #f0f2f5;
+        }
+
+        .chat-item a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .status {
+            font-size: 13px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .bot {
+            background: #e8f0ff;
+            color: #2b5cff;
+        }
+
+        .human {
+            background: #fff2e5;
+            color: #d46b08;
+        }
+
+        .chat-date {
+            font-size: 12px;
+            color: #777;
+        }
+
+        .right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    </style>
 </head>
 <body>
 
-    <div class="navbar">
-        PixelBot — Dashboard
-    </div>
+<div class="navbar">
+    🤖 PixelBot — Dashboard
+</div>
 
-    <div class="container">
-        <h2>Chats recientes</h2>
+<div class="container">
+    <h2>Chats recientes</h2>
 
-        <div class="chat-list" id="chat-list">
-            {% for wa_id, name, last_msg in chats %}
-            <div class="chat-item">
-                <a href="/chat/{{ wa_id }}">
-                    📱 {{ name }} ({{ wa_id }})
-                </a>
-                <span class="chat-date">{{ last_msg }}</span>
-            </div>
+    <div class="chat-list">
+        {% if chats %}
+            {% for wa_id, name, last_ts, handoff in chats %}
+                <div class="chat-item">
+                    <a href="/chat/{{ wa_id }}">
+                        📱 {{ name or "Sin nombre" }} <br>
+                        <small>{{ wa_id }}</small>
+                    </a>
+
+                    <div class="right">
+                        {% if handoff %}
+                            <span class="status human">👤 Humano</span>
+                        {% else %}
+                            <span class="status bot">🤖 Bot</span>
+                        {% endif %}
+                        <span class="chat-date">{{ last_ts }}</span>
+                    </div>
+                </div>
             {% endfor %}
-        </div>
+        {% else %}
+            <p>No hay chats recientes.</p>
+        {% endif %}
     </div>
+</div>
 
 </body>
-
-<script>
-async function refreshChats() {
-    const res = await fetch("/api/recent_chats");
-    const data = await res.json();
-
-    const list = document.getElementById("chat-list");
-    list.innerHTML = ""; // Limpiar lista
-
-    if (!data.chats || data.chats.length === 0) {
-        list.innerHTML = "<p>No hay chats recientes.</p>";
-        return;
-    }
-
-    data.chats.forEach(c => {
-        const item = document.createElement("div");
-        item.classList.add("chat-item");
-        item.innerHTML = `
-            <a href="/chat/${c.wa_id}">
-                📱 ${c.name} (${c.wa_id})
-            </a>
-            <span class="chat-date">${c.timestamp}</span>
-        `;
-        list.appendChild(item);
-    });
-}
-
-// 🔄 Actualizar cada 2 segundos
-setInterval(refreshChats, 2000);
-
-// Cargar al entrar
-refreshChats();
-</script>
-
 </html>
