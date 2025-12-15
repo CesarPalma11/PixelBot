@@ -10,7 +10,7 @@ WHATSAPP_URL = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
 
 
 # =====================
-# ENVÍO A WHATSAPP
+# ENVÍO
 # =====================
 
 def enviar_Mensaje_whatsapp(data):
@@ -82,7 +82,7 @@ def obtener_Mensaje_whatsapp(message):
 
 
 # =====================
-# LÓGICA DEL BOT
+# BOT
 # =====================
 
 def administrar_chatbot(text, number, messageId, name):
@@ -91,23 +91,24 @@ def administrar_chatbot(text, number, messageId, name):
 
     # 🔴 BOT APAGADO
     if is_handoff(number):
-        print("🛑 Handoff activo, bot deshabilitado")
+        print("🛑 Bot desactivado (handoff)")
         return False
 
     enviar_Mensaje_whatsapp(markRead_Message(messageId))
     time.sleep(0.2)
 
-    # 👤 PEDIR ASESOR
+    # 👤 ASESOR
     if text_lower in ["asesor", "humano", "persona", "hablar con alguien"]:
         set_handoff(number, True)
         enviar_Mensaje_whatsapp(text_Message(
             number,
-            "👤 Te comunico con un asesor. En breve alguien del equipo te responde."
+            "👤 Te comunico con un asesor.\n"
+            "Cuando termine la atención, el bot volverá a ayudarte 🤖"
         ))
         save_message(number, name, "bot", "Handoff a asesor")
         return True
 
-    # 👋 MENÚ PRINCIPAL
+    # 👋 MENÚ
     if "hola" in text_lower:
         enviar_Mensaje_whatsapp(buttonReply_Message(
             number,

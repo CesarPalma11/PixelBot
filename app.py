@@ -1,22 +1,13 @@
 from flask import Flask, request, render_template, redirect, url_for
 import os
 import services
-from database import (
-    init_db,
-    save_message,
-    get_recent_chats,
-    get_chat
-)
+from database import init_db, save_message, get_recent_chats, get_chat
 
 app = Flask(__name__)
 init_db()
 
 TOKEN = os.getenv("TOKEN")
 
-
-# =====================
-# DASHBOARD
-# =====================
 
 @app.route("/")
 def dashboard():
@@ -81,9 +72,4 @@ def webhook():
     save_message(number, name, "usuario", text)
 
     services.administrar_chatbot(text, number, messageId, name)
-    return "OK", 200
-
-
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    return "OK"

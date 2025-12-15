@@ -24,11 +24,11 @@ def init_db():
         )
     """)
 
-    # 🔥 estado del chat (handoff)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS chat_state (
             wa_id TEXT PRIMARY KEY,
-            handoff_human INTEGER DEFAULT 0
+            handoff_human INTEGER DEFAULT 0,
+            handoff_at TEXT
         )
     """)
 
@@ -78,28 +78,55 @@ def get_chat(wa_id):
 
 
 # =====================
-# HANDOFF HUMANO
+# HANDOFF
 # =====================
 
 def set_handoff(wa_id, value: bool):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO chat_state (wa_id, handoff_human)
-        VALUES (?, ?)
-        ON CONFLICT(wa_id)
-        DO UPDATE SET handoff_human = excluded.handoff_human
-    """, (wa_id, 1 if value else 0))
+
+    if value:
+        now = datetime.utcnow().isoformat()
+        cursor.execute("""
+            INSERT INTO chat_state (wa_id, handoff_human, handoff_at)
+            VALUES (?, 1, ?)
+            ON CONFLICT(wa_id)
+            DO UPDATE SET handoff_human = 1, handoff_at = ?
+        """, (wa_id, now, now))
+    else:
+        cursor.execute("""
+            UPDATE chat_state
+            SET handoff_human = 0, handoff_at = NULL
+            WHERE wa_id = ?
+        """, (wa_id,))
+
     conn.commit()
     conn.close()
 
 
-def is_handoff(wa_id) -> bool:
+def is_handoff(wa_id, timeout_hours=12):
+    from datetime import timedelta
+
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT handoff_human FROM chat_state WHERE wa_id = ?
+        SELECT handoff_human, handoff_at
+        FROM chat_state
+        WHERE wa_id = ?
     """, (wa_id,))
     row = cursor.fetchone()
     conn.close()
-    return row is not None and row[0] == 1
+
+    if not row:
+        return False
+
+    handoff, handoff_at = row
+
+    if handoff == 1 and handoff_at:
+        started = datetime.fromisoformat(handoff_at)
+        if datetime.utcnow() - started > timedelta(hours=timeout_hours):
+            # 🔄 Auto-reactivar bot
+            set_handoff(wa_id, False)
+            return False
+
+    return handoff == 1
