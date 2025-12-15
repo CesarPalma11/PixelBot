@@ -52,11 +52,50 @@ def verify():
 @app.route("/webhook", methods=["POST"])
 def webhook():
     body = request.get_json()
-    msg = body["entry"][0]["changes"][0]["value"]["messages"][0]
-    number = services.replace_start(msg["from"])
-    name = body["entry"][0]["changes"][0]["value"]["contacts"][0]["profile"]["name"]
+    print("📩 Webhook recibido:", body)
 
-    text = services.obtener_Mensaje_whatsapp(msg)
-    save_message(number, name, "usuario", text)
-    services.administrar_chatbot(text, number, msg["id"], name)
+    try:
+        entry = body.get("entry", [])[0]
+        change = entry.get("changes", [])[0]
+        value = change.get("value", {})
+
+        # 🚫 Si NO hay mensajes, ignorar (statuses, read, etc.)
+        if "messages" not in value:
+            return "EVENTO SIN MENSAJE", 200
+
+        message = value["messages"][0]
+        contact = value.get("contacts", [{}])[0]
+
+        number = services.replace_start(message.get("from"))
+        name = contact.get("profile", {}).get("name", "")
+
+        text = services.obtener_Mensaje_whatsapp(message)
+
+        save_message(number, name, "usuario", text)
+
+        services.administrar_chatbot(
+            text,
+            number,
+            message.get("id"),
+            name
+        )
+
+    except Exception as e:
+        print("❌ Error procesando webhook:", e)
+
     return "OK", 200
+
+
+@app.route("/api/recent_chats")
+def api_recent_chats():
+    chats = get_recent_chats()
+    return {
+        "chats": [
+            {
+                "wa_id": c[0],
+                "name": c[1],
+                "timestamp": c[2]
+            }
+            for c in chats
+        ]
+    }
