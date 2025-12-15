@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request, render_template, redirect, url_for
 import services
 from database import init_db, get_recent_chats, get_chat, save_message, set_handoff
