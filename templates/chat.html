@@ -6,81 +6,164 @@
 <title>Chat con {{ wa_id }} — PixelBot</title>
 
 <style>
-/* (estilos iguales, omitidos por brevedad) */
+body {
+    margin: 0;
+    font-family: Inter, Arial, sans-serif;
+    background: #f5f6f8;
+}
+
+.topbar {
+    background: white;
+    padding: 16px;
+    font-weight: 600;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    gap: 12px;
+}
+
+.chat-container {
+    max-width: 700px;
+    margin: auto;
+    padding: 20px;
+    padding-bottom: 120px;
+    height: calc(100vh - 140px);
+    overflow-y: auto;
+}
+
+.message-row {
+    display: flex;
+    margin: 6px 0;
+}
+
+.message-row.left { justify-content: flex-start; }
+.message-row.right { justify-content: flex-end; }
+
+.message {
+    max-width: 75%;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 14px;
+}
+
+.left .message {
+    background: white;
+    border: 1px solid #ddd;
+}
+
+.right .message {
+    background: #dcf8c6;
+}
+
+.timestamp {
+    font-size: 11px;
+    color: #777;
+    text-align: right;
+    margin-top: 4px;
+}
+
+.sticker-img {
+    width: 180px;
+    border-radius: 8px;
+}
+
+.input-area {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background: white;
+    border-top: 1px solid #ddd;
+    padding: 12px;
+}
+
+.input-body {
+    max-width: 700px;
+    margin: auto;
+    display: flex;
+    gap: 10px;
+}
 </style>
 </head>
+
 <body>
 
 <div class="topbar">
     <a href="/">←</a> Chat con {{ wa_id }}
+
+    <form action="/chat/{{ wa_id }}/close" method="POST" style="margin-left:auto">
+        <button>🔄 Reactivar bot</button>
+    </form>
 </div>
 
-<div id="chat-container"
+<div id="chat"
      class="chat-container"
-     data-last-count="{{ messages|length }}"
-     data-wa-id="{{ wa_id }}">
+     data-wa="{{ wa_id }}"
+     data-count="{{ messages|length }}">
 
-    {% for sender, message, timestamp in messages %}
-        <div class="message-row {{ 'left' if sender == 'usuario' else 'right' }}">
-            <div class="message">
-                {% if "[sticker]" in message %}
-                    <img src="{{ message.replace('[sticker]', '') }}" class="sticker-img">
-                {% else %}
-                    {{ message }}
-                {% endif %}
-                <div class="timestamp">{{ timestamp }}</div>
-            </div>
-        </div>
-    {% endfor %}
+{% for sender, message, timestamp in messages %}
+<div class="message-row {{ 'left' if sender == 'usuario' else 'right' }}">
+    <div class="message">
+        {% if "[sticker]" in message %}
+            <img src="{{ message.replace('[sticker]', '') }}" class="sticker-img">
+        {% else %}
+            {{ message }}
+        {% endif %}
+        <div class="timestamp">{{ timestamp }}</div>
+    </div>
+</div>
+{% endfor %}
 </div>
 
-<form class="input-area" id="chat-form">
-    <input type="text" id="input-text" required>
-    <button type="submit">Enviar</button>
+<form id="sendForm" class="input-area">
+<div class="input-body">
+    <input type="text" id="text" placeholder="Escribí un mensaje..." required>
+    <button>Enviar</button>
+</div>
 </form>
 
 <script>
-const container = document.getElementById("chat-container");
-let lastCount = parseInt(container.dataset.lastCount, 10);
-const WA_ID = container.dataset.waId;
+const chat = document.getElementById("chat");
+let lastCount = parseInt(chat.dataset.count, 10);
+const WA = chat.dataset.wa;
 
 async function refreshChat() {
-    const res = await fetch("/api/chat/" + WA_ID + "/messages");
+    const res = await fetch(`/api/chat/${WA}/messages`);
     const data = await res.json();
 
     for (let i = lastCount; i < data.messages.length; i++) {
         const m = data.messages[i];
         const side = m.sender === "usuario" ? "left" : "right";
 
+        const row = document.createElement("div");
+        row.className = `message-row ${side}`;
+
         const content = m.message.startsWith("[sticker]")
-            ? '<img src="' + m.message.replace("[sticker]", "") + '" class="sticker-img">'
+            ? `<img src="${m.message.replace("[sticker]", "")}" class="sticker-img">`
             : m.message;
 
-        const row = document.createElement("div");
-        row.className = "message-row " + side;
-        row.innerHTML =
-            '<div class="message">' +
-            content +
-            '<div class="timestamp">' + m.timestamp + '</div>' +
-            '</div>';
+        row.innerHTML = `
+            <div class="message">
+                ${content}
+                <div class="timestamp">${m.timestamp}</div>
+            </div>
+        `;
 
-        container.appendChild(row);
+        chat.appendChild(row);
     }
 
     lastCount = data.messages.length;
-    container.scrollTop = container.scrollHeight;
+    chat.scrollTop = chat.scrollHeight;
 }
 
-document.getElementById("chat-form").addEventListener("submit", async function(e) {
+document.getElementById("sendForm").addEventListener("submit", async e => {
     e.preventDefault();
-    const input = document.getElementById("input-text");
+    const input = document.getElementById("text");
     const text = input.value;
     input.value = "";
 
-    await fetch("/send_message/" + WA_ID, {
+    await fetch(`/send_message/${WA}`, {
         method: "POST",
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: new URLSearchParams({text})
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ text })
     });
 
     refreshChat();
