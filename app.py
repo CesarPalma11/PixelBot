@@ -83,10 +83,16 @@ def webhook():
 
         number = services.replace_start(msg["from"])
         name = contact.get("profile", {}).get("name", "")
-        text = services.obtener_Mensaje_whatsapp(msg)
+        text, intent = services.obtener_Mensaje_whatsapp(msg)
 
         save_message(number, name, "usuario", text)
-        services.administrar_chatbot(text, number, msg.get("id"), name)
+        services.administrar_chatbot(
+    text=text,
+    intent=intent,
+    number=number,
+    messageId=msg.get("id"),
+    name=name
+)
 
     except Exception as e:
         print("❌ Error webhook:", e)

@@ -28,11 +28,7 @@ def text_Message(number, text):
     })
 
 
-def buttonReply_Message(number, options, body):
-    buttons = [
-        {"type": "reply", "reply": {"id": str(i), "title": o}}
-        for i, o in enumerate(options, 1)
-    ]
+def buttonReply_Message(number, body):
     return json.dumps({
         "messaging_product": "whatsapp",
         "to": number,
@@ -40,102 +36,76 @@ def buttonReply_Message(number, options, body):
         "interactive": {
             "type": "button",
             "body": {"text": body},
-            "action": {"buttons": buttons}
+            "action": {
+                "buttons": [
+                    {
+                        "type": "reply",
+                        "reply": {"id": "chatbots", "title": "🤖 Chatbots"}
+                    },
+                    {
+                        "type": "reply",
+                        "reply": {"id": "webs", "title": "🌐 Páginas web"}
+                    },
+                    {
+                        "type": "reply",
+                        "reply": {"id": "asesor", "title": "💼 Asesor"}
+                    }
+                ]
+            }
         }
     })
 
 
 def obtener_Mensaje_whatsapp(msg):
     if msg["type"] == "text":
-        return msg["text"]["body"]
-    if msg["type"] == "button":
-        return msg["button"]["text"]
+        return msg["text"]["body"], None
+
     if msg["type"] == "interactive":
-        return msg["interactive"]["button_reply"]["title"]
-    return ""
+        reply = msg["interactive"]["button_reply"]
+        return reply["title"], reply["id"]
+
+    return "", None
 
 
-def administrar_chatbot(text, number, messageId, name):
-    text_raw = text
-    text = text.lower().strip()
+def administrar_chatbot(text, intent, number, messageId, name):
+    text = (text or "").lower().strip()
 
-    print("🤖 BOT RECIBE:", text, "handoff:", is_handoff(number))
+    if is_handoff(number):
+        return
 
-    # 👤 salida manual de humano
-    if text in ["bot", "activar bot", "volver al bot"]:
-        from database import disable_handoff
-        disable_handoff(number)
-
+    # BOTONES
+    if intent == "chatbots":
         enviar_Mensaje_whatsapp(text_Message(
             number,
-            "🤖 El bot de PixelTech volvió a activarse.\nEscribí *hola* para continuar."
+            "🚀 Automatizamos WhatsApp para tu negocio.\n\n"
+            "✔️ Bots 24/7\n"
+            "✔️ Ventas automáticas\n"
+            "✔️ Atención híbrida\n\n"
+            "¿Querés una demo?"
         ))
-        save_message(number, name, "bot", "🤖 Bot reactivado")
+        save_message(number, name, "bot", "Info chatbots")
         return
 
-    # 🔒 bloqueo SOLO si está en humano
-    if is_handoff(number):
-        print("🔴 Modo humano activo — bot en pausa")
+    if intent == "webs":
+        enviar_Mensaje_whatsapp(text_Message(
+            number,
+            "🌐 Diseñamos páginas web modernas y rápidas.\n\n"
+            "✔️ Landing pages\n"
+            "✔️ Webs corporativas\n"
+            "✔️ Integración con WhatsApp"
+        ))
+        save_message(number, name, "bot", "Info webs")
         return
 
-    # 👤 asesor
-    if text in ["asesor", "hablar con un asesor", "persona", "humano"]:
+    if intent == "asesor" or text == "asesor":
         set_handoff(number, minutes=60)
         enviar_Mensaje_whatsapp(text_Message(
             number,
-            "👤 Te asignamos un asesor de *PixelTech*.\n"
-            "⏱️ Atención humana durante 1 hora."
+            "👤 Te paso con un asesor de PixelTech.\n"
+            "⏱️ Atención humana por 1 hora."
         ))
-        save_message(number, name, "bot", "👤 Atención humana activada")
+        save_message(number, name, "bot", "Handoff activado")
         return
-
-    # 👋 saludo
-    if text.startswith("hola") or text.startswith("buen"):
-        enviar_Mensaje_whatsapp(buttonReply_Message(
-            number,
-            [
-                "🤖 Chatbots",
-                "🌐 Páginas web",
-                "💼 Asesor"
-            ],
-            "👋 Hola, somos *PixelTech*\n"
-            "Desarrollamos chatbots inteligentes y páginas web modernas.\n\n"
-            "¿Qué te gustaría conocer?"
-        ))
-        save_message(number, name, "bot", "👋 Menú principal")
-        return
-
-    respuestas = {
-        "🤖 chatbots para whatsapp":
-            "🚀 Automatizamos ventas y atención en WhatsApp.\n\n"
-            "✔️ Bots 24/7\n"
-            "✔️ Integración con CRM\n"
-            "✔️ Handoff humano\n"
-            "✔️ Métricas en tiempo real\n\n"
-            "¿Querés una demo?",
-
-        "🌐 páginas web profesionales":
-            "🎨 Diseñamos webs rápidas y modernas.\n\n"
-            "✔️ Landing pages\n"
-            "✔️ Webs corporativas\n"
-            "✔️ SEO + WhatsApp\n\n"
-            "¿Para qué tipo de negocio?",
-
-        "💼 hablar con un asesor":
-            "Perfecto 👍 escribí *asesor* y te atendemos."
-    }
-
-    if text in respuestas:
-        enviar_Mensaje_whatsapp(text_Message(number, respuestas[text]))
-        save_message(number, name, "bot", respuestas[text])
-        return
-
-    enviar_Mensaje_whatsapp(text_Message(
-        number,
-        "🤖 No entendí tu mensaje.\n"
-        "Escribí *hola* para ver las opciones."
-    ))
-
 
 def replace_start(s):
     return "54" + s[3:] if s.startswith("549") else s
