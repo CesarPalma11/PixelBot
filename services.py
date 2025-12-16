@@ -56,23 +56,41 @@ def obtener_Mensaje_whatsapp(msg):
 
 
 def administrar_chatbot(text, number, messageId, name):
+    text_raw = text
     text = text.lower().strip()
 
+    print("🤖 BOT RECIBE:", text, "handoff:", is_handoff(number))
+
+    # 👤 salida manual de humano
+    if text in ["bot", "activar bot", "volver al bot"]:
+        from database import disable_handoff
+        disable_handoff(number)
+
+        enviar_Mensaje_whatsapp(text_Message(
+            number,
+            "🤖 El bot de PixelTech volvió a activarse.\nEscribí *hola* para continuar."
+        ))
+        save_message(number, name, "bot", "🤖 Bot reactivado")
+        return
+
+    # 🔒 bloqueo SOLO si está en humano
     if is_handoff(number):
+        print("🔴 Modo humano activo — bot en pausa")
         return
 
     # 👤 asesor
-    if text in ["asesor", "hablar con un asesor", "persona"]:
+    if text in ["asesor", "hablar con un asesor", "persona", "humano"]:
         set_handoff(number, minutes=60)
         enviar_Mensaje_whatsapp(text_Message(
             number,
-            "👤 Te asignamos un asesor de PixelTech.\n"
+            "👤 Te asignamos un asesor de *PixelTech*.\n"
             "⏱️ Atención humana durante 1 hora."
         ))
         save_message(number, name, "bot", "👤 Atención humana activada")
         return
 
-    if "hola" in text or "buen" in text:
+    # 👋 saludo
+    if text.startswith("hola") or text.startswith("buen"):
         enviar_Mensaje_whatsapp(buttonReply_Message(
             number,
             [
@@ -81,20 +99,26 @@ def administrar_chatbot(text, number, messageId, name):
                 "💼 Hablar con un asesor"
             ],
             "👋 Hola, somos *PixelTech*\n"
-            "Creamos chatbots inteligentes y páginas web modernas.\n"
-            "¿En qué podemos ayudarte?"
+            "Desarrollamos chatbots inteligentes y páginas web modernas.\n\n"
+            "¿Qué te gustaría conocer?"
         ))
+        save_message(number, name, "bot", "👋 Menú principal")
         return
 
     respuestas = {
         "🤖 chatbots para whatsapp":
-            "🚀 Automatizamos ventas y atención en WhatsApp.\n"
-            "✔️ Bots 24/7\n✔️ Handoff humano\n✔️ Métricas\n\n"
+            "🚀 Automatizamos ventas y atención en WhatsApp.\n\n"
+            "✔️ Bots 24/7\n"
+            "✔️ Integración con CRM\n"
+            "✔️ Handoff humano\n"
+            "✔️ Métricas en tiempo real\n\n"
             "¿Querés una demo?",
 
         "🌐 páginas web profesionales":
-            "🎨 Diseñamos webs modernas, rápidas y optimizadas.\n"
-            "✔️ Landing pages\n✔️ Webs corporativas\n✔️ Integración con WhatsApp\n\n"
+            "🎨 Diseñamos webs rápidas y modernas.\n\n"
+            "✔️ Landing pages\n"
+            "✔️ Webs corporativas\n"
+            "✔️ SEO + WhatsApp\n\n"
             "¿Para qué tipo de negocio?",
 
         "💼 hablar con un asesor":
@@ -111,7 +135,6 @@ def administrar_chatbot(text, number, messageId, name):
         "🤖 No entendí tu mensaje.\n"
         "Escribí *hola* para ver las opciones."
     ))
-
 
 
 def replace_start(s):
