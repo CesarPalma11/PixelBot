@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-from database import save_message, set_handoff, is_handoff
+from database import save_message, set_handoff, is_handoff, ya_reacciono, set_reacciono_flag
 
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
@@ -67,14 +67,47 @@ def obtener_Mensaje_whatsapp(msg):
     return "", None
 
 
+# --- NUEVAS FUNCIONES ---
+def marcar_como_leido(message_id):
+    url = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
+    payload = {
+        "messaging_product": "whatsapp",
+        "status": "read",
+        "message_id": message_id
+    }
+    headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
+    requests.post(url, json=payload, headers=headers)
+
+
+def reaccionar_mensaje(message_id, emoji="👋"):
+    url = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
+    payload = {
+        "messaging_product": "whatsapp",
+        "type": "reaction",
+        "reaction": {
+            "message_id": message_id,
+            "emoji": emoji
+        }
+    }
+    headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
+    requests.post(url, json=payload, headers=headers)
+
+
 def administrar_chatbot(text, intent, number, messageId, name):
     text = (text or "").lower().strip()
 
     if is_handoff(number):
         return
 
-    # SALUDO
+    # --- DOBLE VISTO AZUL ---
+    marcar_como_leido(messageId)
+
+    # --- SALUDO Y REACCIÓN ---
     if "hola" in text:
+        if not ya_reacciono(number):
+            reaccionar_mensaje(messageId, "👋")
+            set_reacciono_flag(number)
+
         enviar_Mensaje_whatsapp(buttonReply_Message(
             number,
             "👋 ¡Hola! Soy PixelBot. ¿Cómo podemos ayudarte?"
@@ -82,7 +115,7 @@ def administrar_chatbot(text, intent, number, messageId, name):
         save_message(number, name, "bot", "Saludo con botones")
         return
 
-    # BOTONES
+    # --- BOTONES ---
     if intent == "chatbots":
         enviar_Mensaje_whatsapp(text_Message(
             number,
@@ -111,10 +144,11 @@ def administrar_chatbot(text, intent, number, messageId, name):
         enviar_Mensaje_whatsapp(text_Message(
             number,
             "👤 Te paso con un asesor de PixelTech.\n"
-            "⏱️ Atención humana por 1 hora."
+            "⏱️ A la brevedad se comunicaran con usted."
         ))
         save_message(number, name, "bot", "Handoff activado")
         return
+
 
 def replace_start(s):
     return "54" + s[3:] if s.startswith("549") else s
