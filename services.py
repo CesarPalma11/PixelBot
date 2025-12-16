@@ -1,11 +1,20 @@
 import os
 import json
 import requests
-from database import save_message, set_handoff, is_handoff, ya_reacciono, set_reacciono_flag
+from database import save_message, set_handoff, is_handoff
 
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 WHATSAPP_URL = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
+
+# --- MEMORIA TEMPORAL PARA REACCIONES ---
+_reaccionados = {}
+
+def ya_reacciono(number):
+    return _reaccionados.get(number, False)
+
+def set_reacciono_flag(number):
+    _reaccionados[number] = True
 
 
 def enviar_Mensaje_whatsapp(data):
@@ -38,18 +47,9 @@ def buttonReply_Message(number, body):
             "body": {"text": body},
             "action": {
                 "buttons": [
-                    {
-                        "type": "reply",
-                        "reply": {"id": "chatbots", "title": "🤖 Chatbots"}
-                    },
-                    {
-                        "type": "reply",
-                        "reply": {"id": "webs", "title": "🌐 Páginas web"}
-                    },
-                    {
-                        "type": "reply",
-                        "reply": {"id": "asesor", "title": "💼 Asesor"}
-                    }
+                    {"type": "reply", "reply": {"id": "chatbots", "title": "🤖 Chatbots"}},
+                    {"type": "reply", "reply": {"id": "webs", "title": "🌐 Páginas web"}},
+                    {"type": "reply", "reply": {"id": "asesor", "title": "💼 Asesor"}}
                 ]
             }
         }
@@ -59,28 +59,24 @@ def buttonReply_Message(number, body):
 def obtener_Mensaje_whatsapp(msg):
     if msg["type"] == "text":
         return msg["text"]["body"], None
-
     if msg["type"] == "interactive":
         reply = msg["interactive"]["button_reply"]
         return reply["title"], reply["id"]
-
     return "", None
 
 
-# --- NUEVAS FUNCIONES ---
+# --- FUNCIONES NUEVAS ---
 def marcar_como_leido(message_id):
-    url = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
     payload = {
         "messaging_product": "whatsapp",
         "status": "read",
         "message_id": message_id
     }
     headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
-    requests.post(url, json=payload, headers=headers)
+    requests.post(WHATSAPP_URL, json=payload, headers=headers)
 
 
 def reaccionar_mensaje(message_id, emoji="👋"):
-    url = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
     payload = {
         "messaging_product": "whatsapp",
         "type": "reaction",
@@ -90,7 +86,7 @@ def reaccionar_mensaje(message_id, emoji="👋"):
         }
     }
     headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
-    requests.post(url, json=payload, headers=headers)
+    requests.post(WHATSAPP_URL, json=payload, headers=headers)
 
 
 def administrar_chatbot(text, intent, number, messageId, name):
@@ -144,7 +140,7 @@ def administrar_chatbot(text, intent, number, messageId, name):
         enviar_Mensaje_whatsapp(text_Message(
             number,
             "👤 Te paso con un asesor de PixelTech.\n"
-            "⏱️ A la brevedad se comunicaran con usted."
+            "⏱️ A la brevedad se comunicarán con usted."
         ))
         save_message(number, name, "bot", "Handoff activado")
         return
