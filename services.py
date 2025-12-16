@@ -94,9 +94,9 @@ def administrar_chatbot(text, number, messageId, name):
         enviar_Mensaje_whatsapp(buttonReply_Message(
             number,
             [
-                "🤖 Chatbots para WhatsApp",
-                "🌐 Páginas web profesionales",
-                "💼 Hablar con un asesor"
+                "🤖 Chatbots",
+                "🌐 Páginas web",
+                "💼 Asesor"
             ],
             "👋 Hola, somos *PixelTech*\n"
             "Desarrollamos chatbots inteligentes y páginas web modernas.\n\n"
