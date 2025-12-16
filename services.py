@@ -1,7 +1,6 @@
-import requests
 import os
 import json
-import time
+import requests
 from database import save_message, set_handoff, is_handoff
 
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
@@ -30,8 +29,10 @@ def text_Message(number, text):
 
 
 def buttonReply_Message(number, options, body):
-    buttons = [{"type": "reply", "reply": {"id": str(i), "title": o}}
-               for i, o in enumerate(options, 1)]
+    buttons = [
+        {"type": "reply", "reply": {"id": str(i), "title": o}}
+        for i, o in enumerate(options, 1)
+    ]
     return json.dumps({
         "messaging_product": "whatsapp",
         "to": number,
@@ -54,54 +55,47 @@ def obtener_Mensaje_whatsapp(msg):
     return ""
 
 
-# =====================
-# BOT
-# =====================
-
 def administrar_chatbot(text, number, messageId, name):
     text = text.lower().strip()
 
-    # BOT OFF
+    # 👤 humano activo
     if is_handoff(number):
-        print("👤 Chat en modo humano")
-        return False
+        print("👤 Modo humano activo")
+        return
 
-    # ASESOR
+    # 👉 pedir asesor
     if text in ["asesor", "hablar con una persona"]:
-        set_handoff(number, True)
+        set_handoff(number, minutes=60)
         enviar_Mensaje_whatsapp(text_Message(
             number,
-            "👤 Te paso con un asesor.\n"
-            "🤖 El bot se reactivará automáticamente."
+            "👤 Te paso con un asesor.\n🤖 El bot se reactivará automáticamente en 1 hora."
         ))
         save_message(number, name, "bot", "handoff activado")
-        return True
+        return
 
-    # MENU
     if "hola" in text:
         enviar_Mensaje_whatsapp(buttonReply_Message(
             number,
             ["Ver productos", "Soporte", "Estado de mi pedido"],
-            "👋 Hola\nEscribí *asesor* para hablar con una persona 👤"
+            "👋 Hola, ¿en qué puedo ayudarte?\n\nEscribí *asesor* para hablar con una persona 👤"
         ))
-        return True
+        return
 
     respuestas = {
-        "ver productos": "🛒 Catálogo...",
-        "soporte": "🛠️ Decime tu problema",
-        "estado de mi pedido": "📦 Número de pedido?"
+        "ver productos": "🛒 Te paso el catálogo",
+        "soporte": "🛠️ Contame tu problema",
+        "estado de mi pedido": "📦 Decime tu número de pedido"
     }
 
     if text in respuestas:
         enviar_Mensaje_whatsapp(text_Message(number, respuestas[text]))
         save_message(number, name, "bot", respuestas[text])
-        return True
+        return
 
     enviar_Mensaje_whatsapp(text_Message(
         number,
-        "No entendí. Escribí *hola*."
+        "No entendí 🤖. Escribí *hola*."
     ))
-    return True
 
 
 def replace_start(s):
