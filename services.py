@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-from database import save_message, set_handoff, is_handoff, ya_reacciono, set_reacciono_flag, reset_handoff
+from database import save_message, set_handoff, is_handoff, reset_handoff
 
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
@@ -16,7 +16,7 @@ def ya_reacciono(number):
 def set_reacciono_flag(number):
     _reaccionados[number] = True
 
-
+# --- FUNCIONES PRINCIPALES ---
 def enviar_Mensaje_whatsapp(data):
     headers = {
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
@@ -37,15 +37,7 @@ def text_Message(number, text):
     })
 
 
-def buttonReply_Message(number, body, include_finalize=False):
-    buttons = [
-        {"type": "reply", "reply": {"id": "chatbots", "title": "🤖 Chatbots"}},
-        {"type": "reply", "reply": {"id": "webs", "title": "🌐 Páginas web"}},
-        {"type": "reply", "reply": {"id": "asesor", "title": "💼 Asesor"}}
-    ]
-    if include_finalize:
-        buttons.append({"type": "reply", "reply": {"id": "finalizar", "title": "✅ Finalizar conversación"}})
-
+def buttonReply_Message(number, body):
     return json.dumps({
         "messaging_product": "whatsapp",
         "to": number,
@@ -53,7 +45,14 @@ def buttonReply_Message(number, body, include_finalize=False):
         "interactive": {
             "type": "button",
             "body": {"text": body},
-            "action": {"buttons": buttons}
+            "action": {
+                "buttons": [
+                    {"type": "reply", "reply": {"id": "chatbots", "title": "🤖 Chatbots"}},
+                    {"type": "reply", "reply": {"id": "webs", "title": "🌐 Páginas web"}},
+                    {"type": "reply", "reply": {"id": "asesor", "title": "💼 Asesor"}},
+                    {"type": "reply", "reply": {"id": "finalizar", "title": "✅ Finalizar conversación"}}
+                ]
+            }
         }
     })
 
@@ -94,12 +93,7 @@ def reaccionar_mensaje(message_id, emoji="👋"):
 def administrar_chatbot(text, intent, number, messageId, name):
     text = (text or "").lower().strip()
 
-    # --- FINALIZAR CONVERSACIÓN ---
-    if intent == "finalizar":
-        reset_handoff(number)  # Limpia handoff para reactivar el bot
-        save_message(number, name, "bot", "Conversación finalizada")
-        return
-
+    # --- Si está en handoff, no hace nada ---
     if is_handoff(number):
         return
 
@@ -114,8 +108,7 @@ def administrar_chatbot(text, intent, number, messageId, name):
 
         enviar_Mensaje_whatsapp(buttonReply_Message(
             number,
-            "👋 ¡Hola! Soy PixelBot. ¿Cómo podemos ayudarte?",
-            include_finalize=True  # Incluye botón de finalizar conversación
+            "👋 ¡Hola! Soy PixelBot. ¿Cómo podemos ayudarte?"
         ))
         save_message(number, name, "bot", "Saludo con botones")
         return
@@ -145,13 +138,19 @@ def administrar_chatbot(text, intent, number, messageId, name):
         return
 
     if intent == "asesor" or text == "asesor":
-        set_handoff(number, minutes=60)  # Bot se reactivará solo después de 60 minutos
+        set_handoff(number, minutes=60)
         enviar_Mensaje_whatsapp(text_Message(
             number,
             "👤 Te paso con un asesor de PixelTech.\n"
             "⏱️ A la brevedad se comunicarán con usted."
         ))
         save_message(number, name, "bot", "Handoff activado")
+        return
+
+    # --- FINALIZAR CONVERSACIÓN ---
+    if intent == "finalizar":
+        reset_handoff(number)  # Reactiva el bot inmediatamente
+        save_message(number, name, "bot", "Conversación finalizada")
         return
 
 
