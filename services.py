@@ -73,6 +73,15 @@ def administrar_chatbot(text, intent, number, messageId, name):
     if is_handoff(number):
         return
 
+    # SALUDO
+    if "hola" in text:
+        enviar_Mensaje_whatsapp(buttonReply_Message(
+            number,
+            "👋 ¡Hola! Soy PixelBot. ¿Cómo podemos ayudarte?"
+        ))
+        save_message(number, name, "bot", "Saludo con botones")
+        return
+
     # BOTONES
     if intent == "chatbots":
         enviar_Mensaje_whatsapp(text_Message(
