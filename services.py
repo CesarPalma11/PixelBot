@@ -58,32 +58,58 @@ def obtener_Mensaje_whatsapp(msg):
 def administrar_chatbot(text, number, messageId, name):
     text = text.lower().strip()
 
-    # 🔒 BLOQUEO TOTAL
     if is_handoff(number):
-        print("🔴 Chat en modo humano — bot OFF")
         return
 
-    if text in ["asesor", "hablar con una persona"]:
+    # 👤 asesor
+    if text in ["asesor", "hablar con un asesor", "persona"]:
         set_handoff(number, minutes=60)
         enviar_Mensaje_whatsapp(text_Message(
             number,
-            "👤 Te paso con un asesor.\n"
-            "⏱️ Atención humana por 1 hora."
+            "👤 Te asignamos un asesor de PixelTech.\n"
+            "⏱️ Atención humana durante 1 hora."
         ))
-        save_message(number, name, "bot", "[handoff] humano 1h")
+        save_message(number, name, "bot", "👤 Atención humana activada")
         return
 
-    if "hola" in text:
+    if "hola" in text or "buen" in text:
         enviar_Mensaje_whatsapp(buttonReply_Message(
             number,
-            ["Ver productos", "Soporte", "Estado de mi pedido"],
-            "👋 Hola\nEscribí *asesor* para hablar con una persona 👤"
+            [
+                "🤖 Chatbots para WhatsApp",
+                "🌐 Páginas web profesionales",
+                "💼 Hablar con un asesor"
+            ],
+            "👋 Hola, somos *PixelTech*\n"
+            "Creamos chatbots inteligentes y páginas web modernas.\n"
+            "¿En qué podemos ayudarte?"
         ))
+        return
+
+    respuestas = {
+        "🤖 chatbots para whatsapp":
+            "🚀 Automatizamos ventas y atención en WhatsApp.\n"
+            "✔️ Bots 24/7\n✔️ Handoff humano\n✔️ Métricas\n\n"
+            "¿Querés una demo?",
+
+        "🌐 páginas web profesionales":
+            "🎨 Diseñamos webs modernas, rápidas y optimizadas.\n"
+            "✔️ Landing pages\n✔️ Webs corporativas\n✔️ Integración con WhatsApp\n\n"
+            "¿Para qué tipo de negocio?",
+
+        "💼 hablar con un asesor":
+            "Perfecto 👍 escribí *asesor* y te atendemos."
+    }
+
+    if text in respuestas:
+        enviar_Mensaje_whatsapp(text_Message(number, respuestas[text]))
+        save_message(number, name, "bot", respuestas[text])
         return
 
     enviar_Mensaje_whatsapp(text_Message(
         number,
-        "No entendí 🤖. Escribí *hola*."
+        "🤖 No entendí tu mensaje.\n"
+        "Escribí *hola* para ver las opciones."
     ))
 
 

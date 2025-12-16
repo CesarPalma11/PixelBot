@@ -57,11 +57,15 @@ def api_recent_chats():
     chats = get_recent_chats()
     return {
         "chats": [
-            {"wa_id": c[0], "name": c[1], "timestamp": c[2]}
+            {
+                "wa_id": c[0],
+                "name": c[1],
+                "timestamp": c[2],
+                "handoff": bool(c[3])
+            }
             for c in chats
         ]
     }
-
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
@@ -96,7 +100,8 @@ def handoff_timed(wa_id, minutes):
     return redirect(url_for("chat_view", wa_id=wa_id))
 
 
+
 @app.route("/api/chat/<wa_id>/status")
 def api_chat_status(wa_id):
-    from database import get_chat_status
-    return {"status": get_chat_status(wa_id)}
+    from database import is_handoff
+    return {"handoff": is_handoff(wa_id)}

@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 
 DB = "pixelbot.db"
 
-
 def conn():
     return sqlite3.connect(DB)
 
@@ -36,17 +35,15 @@ def init_db():
     c.close()
 
 
-# =========================
+# =====================
 # MENSAJES
-# =========================
+# =====================
 
 def save_message(wa_id, name, sender, message):
+    ts = datetime.utcnow().isoformat()
     c = conn()
     cur = c.cursor()
 
-    ts = datetime.utcnow().isoformat()
-
-    # asegurar chat
     cur.execute("""
     INSERT OR IGNORE INTO chats (wa_id, name)
     VALUES (?, ?)
@@ -58,8 +55,7 @@ def save_message(wa_id, name, sender, message):
     """, (wa_id, sender, message, ts))
 
     cur.execute("""
-    UPDATE chats
-    SET last_message_at = ?
+    UPDATE chats SET last_message_at = ?
     WHERE wa_id = ?
     """, (ts, wa_id))
 
@@ -94,34 +90,23 @@ def get_recent_chats():
     return rows
 
 
-# =========================
+# =====================
 # HANDOFF
-# =========================
+# =====================
 
-def set_handoff(wa_id, minutes=None):
-    """
-    minutes:
-    - None → humano indefinido
-    - >0   → humano temporal
-    """
+def set_handoff(wa_id, minutes=60):
+    until = (datetime.utcnow() + timedelta(minutes=minutes)).isoformat()
     c = conn()
     cur = c.cursor()
 
-    # asegurar chat
     cur.execute("""
     INSERT OR IGNORE INTO chats (wa_id)
     VALUES (?)
     """, (wa_id,))
 
-    if minutes:
-        until = (datetime.utcnow() + timedelta(minutes=minutes)).isoformat()
-    else:
-        until = None
-
     cur.execute("""
     UPDATE chats
-    SET handoff = 1,
-        handoff_until = ?
+    SET handoff = 1, handoff_until = ?
     WHERE wa_id = ?
     """, (until, wa_id))
 
@@ -134,8 +119,7 @@ def disable_handoff(wa_id):
     cur = c.cursor()
     cur.execute("""
     UPDATE chats
-    SET handoff = 0,
-        handoff_until = NULL
+    SET handoff = 0, handoff_until = NULL
     WHERE wa_id = ?
     """, (wa_id,))
     c.commit()
@@ -153,44 +137,11 @@ def is_handoff(wa_id):
     row = cur.fetchone()
     c.close()
 
-    if not row:
+    if not row or not row[0]:
         return False
 
-    handoff, until = row
-
-    if not handoff:
+    if row[1] and datetime.utcnow() > datetime.fromisoformat(row[1]):
+        disable_handoff(wa_id)
         return False
-
-    if until:
-        if datetime.utcnow() > datetime.fromisoformat(until):
-            disable_handoff(wa_id)
-            return False
 
     return True
-
-
-def can_reactivate_bot(wa_id):
-    return is_handoff(wa_id)
-
-
-def get_chat_status(wa_id):
-    c = conn()
-    cur = c.cursor()
-    cur.execute("""
-    SELECT handoff, handoff_until
-    FROM chats
-    WHERE wa_id = ?
-    """, (wa_id,))
-    row = cur.fetchone()
-    c.close()
-
-    if not row or not row[0]:
-        return "bot"
-
-    if row[1]:
-        if datetime.utcnow() > datetime.fromisoformat(row[1]):
-            disable_handoff(wa_id)
-            return "bot"
-        return "human_timed"
-
-    return "human"
