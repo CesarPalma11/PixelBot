@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-from database import save_message, set_handoff, is_handoff
+from database import save_message, set_handoff, is_handoff, reset_handoff
 
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
@@ -16,7 +16,7 @@ def ya_reacciono(number):
 def set_reacciono_flag(number):
     _reaccionados[number] = True
 
-
+# --- FUNCIONES DE ENVÍO DE MENSAJES ---
 def enviar_Mensaje_whatsapp(data):
     headers = {
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
@@ -27,7 +27,6 @@ def enviar_Mensaje_whatsapp(data):
     print("WA:", res.status_code, res.text)
     return res.status_code
 
-
 def text_Message(number, text):
     return json.dumps({
         "messaging_product": "whatsapp",
@@ -35,7 +34,6 @@ def text_Message(number, text):
         "type": "text",
         "text": {"body": text}
     })
-
 
 def buttonReply_Message(number, body):
     return json.dumps({
@@ -49,13 +47,11 @@ def buttonReply_Message(number, body):
                 "buttons": [
                     {"type": "reply", "reply": {"id": "chatbots", "title": "🤖 Chatbots"}},
                     {"type": "reply", "reply": {"id": "webs", "title": "🌐 Páginas web"}},
-                    {"type": "reply", "reply": {"id": "asesor", "title": "💼 Asesor"}},
-                    {"type": "reply", "reply": {"id": "finalizar", "title": "✅ Finalizar conversación"}}
+                    {"type": "reply", "reply": {"id": "asesor", "title": "💼 Asesor"}}
                 ]
             }
         }
     })
-
 
 def obtener_Mensaje_whatsapp(msg):
     if msg["type"] == "text":
@@ -64,7 +60,6 @@ def obtener_Mensaje_whatsapp(msg):
         reply = msg["interactive"]["button_reply"]
         return reply["title"], reply["id"]
     return "", None
-
 
 # --- FUNCIONES NUEVAS ---
 def marcar_como_leido(message_id):
@@ -75,7 +70,6 @@ def marcar_como_leido(message_id):
     }
     headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
     requests.post(WHATSAPP_URL, json=payload, headers=headers)
-
 
 def reaccionar_mensaje(message_id, emoji="👋"):
     payload = {
@@ -89,11 +83,10 @@ def reaccionar_mensaje(message_id, emoji="👋"):
     headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
     requests.post(WHATSAPP_URL, json=payload, headers=headers)
 
-
+# --- ADMINISTRACIÓN DEL CHATBOT ---
 def administrar_chatbot(text, intent, number, messageId, name):
     text = (text or "").lower().strip()
 
-    # Si está en handoff, no hacemos nada
     if is_handoff(number):
         return
 
@@ -147,12 +140,15 @@ def administrar_chatbot(text, intent, number, messageId, name):
         save_message(number, name, "bot", "Handoff activado")
         return
 
-    if intent == "finalizar":
-        # Solo reactiva el bot; no enviamos mensaje
-        set_handoff(number, minutes=0)
-        save_message(number, name, "bot", "Conversación finalizada")
-        return
+# --- FUNCIÓN ADMIN PARA FINALIZAR CONVERSACIÓN ---
+def finalizar_conversacion(number):
+    """
+    Permite al admin finalizar la conversación.
+    Reactiva el bot sin enviar mensaje al usuario.
+    """
+    reset_handoff(number)
+    save_message(number, "admin", "system", "Conversación finalizada, bot reactivado")
 
-
+# --- UTILITY ---
 def replace_start(s):
     return "54" + s[3:] if s.startswith("549") else s
