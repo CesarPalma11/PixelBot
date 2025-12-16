@@ -16,7 +16,7 @@ def ya_reacciono(number):
 def set_reacciono_flag(number):
     _reaccionados[number] = True
 
-# --- FUNCIONES DE ENVÍO DE MENSAJES ---
+# --- ENVÍO DE MENSAJES ---
 def enviar_Mensaje_whatsapp(data):
     headers = {
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
@@ -61,7 +61,7 @@ def obtener_Mensaje_whatsapp(msg):
         return reply["title"], reply["id"]
     return "", None
 
-# --- FUNCIONES NUEVAS ---
+# --- NUEVAS FUNCIONES ---
 def marcar_como_leido(message_id):
     payload = {
         "messaging_product": "whatsapp",
@@ -82,6 +82,12 @@ def reaccionar_mensaje(message_id, emoji="👋"):
     }
     headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
     requests.post(WHATSAPP_URL, json=payload, headers=headers)
+
+# --- ADMIN: FINALIZAR CONVERSACIÓN ---
+def finalizar_conversacion(number):
+    """Reinicia el bot para la siguiente conversación sin enviar mensaje."""
+    reset_handoff(number)
+    save_message(number, "admin", "system", "Conversación finalizada, bot reactivado")
 
 # --- ADMINISTRACIÓN DEL CHATBOT ---
 def administrar_chatbot(text, intent, number, messageId, name):
@@ -140,15 +146,5 @@ def administrar_chatbot(text, intent, number, messageId, name):
         save_message(number, name, "bot", "Handoff activado")
         return
 
-# --- FUNCIÓN ADMIN PARA FINALIZAR CONVERSACIÓN ---
-def finalizar_conversacion(number):
-    """
-    Permite al admin finalizar la conversación.
-    Reactiva el bot sin enviar mensaje al usuario.
-    """
-    reset_handoff(number)
-    save_message(number, "admin", "system", "Conversación finalizada, bot reactivado")
-
-# --- UTILITY ---
 def replace_start(s):
     return "54" + s[3:] if s.startswith("549") else s
