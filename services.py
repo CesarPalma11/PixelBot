@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-from database import save_message, set_handoff, is_handoff, reset_handoff
+from database import save_message, set_handoff, is_handoff
 
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
@@ -16,7 +16,7 @@ def ya_reacciono(number):
 def set_reacciono_flag(number):
     _reaccionados[number] = True
 
-# --- ENVÍO DE MENSAJES ---
+
 def enviar_Mensaje_whatsapp(data):
     headers = {
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
@@ -27,6 +27,7 @@ def enviar_Mensaje_whatsapp(data):
     print("WA:", res.status_code, res.text)
     return res.status_code
 
+
 def text_Message(number, text):
     return json.dumps({
         "messaging_product": "whatsapp",
@@ -34,6 +35,7 @@ def text_Message(number, text):
         "type": "text",
         "text": {"body": text}
     })
+
 
 def buttonReply_Message(number, body):
     return json.dumps({
@@ -53,6 +55,7 @@ def buttonReply_Message(number, body):
         }
     })
 
+
 def obtener_Mensaje_whatsapp(msg):
     if msg["type"] == "text":
         return msg["text"]["body"], None
@@ -61,7 +64,8 @@ def obtener_Mensaje_whatsapp(msg):
         return reply["title"], reply["id"]
     return "", None
 
-# --- NUEVAS FUNCIONES ---
+
+# --- FUNCIONES NUEVAS ---
 def marcar_como_leido(message_id):
     payload = {
         "messaging_product": "whatsapp",
@@ -70,6 +74,7 @@ def marcar_como_leido(message_id):
     }
     headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
     requests.post(WHATSAPP_URL, json=payload, headers=headers)
+
 
 def reaccionar_mensaje(message_id, emoji="👋"):
     payload = {
@@ -83,13 +88,7 @@ def reaccionar_mensaje(message_id, emoji="👋"):
     headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
     requests.post(WHATSAPP_URL, json=payload, headers=headers)
 
-# --- ADMIN: FINALIZAR CONVERSACIÓN ---
-def finalizar_conversacion(number):
-    """Reinicia el bot para la siguiente conversación sin enviar mensaje."""
-    reset_handoff(number)
-    save_message(number, "admin", "system", "Conversación finalizada, bot reactivado")
 
-# --- ADMINISTRACIÓN DEL CHATBOT ---
 def administrar_chatbot(text, intent, number, messageId, name):
     text = (text or "").lower().strip()
 
@@ -145,6 +144,7 @@ def administrar_chatbot(text, intent, number, messageId, name):
         ))
         save_message(number, name, "bot", "Handoff activado")
         return
+
 
 def replace_start(s):
     return "54" + s[3:] if s.startswith("549") else s
