@@ -88,3 +88,15 @@ def webhook():
         print("❌ Error webhook:", e)
 
     return "OK", 200
+
+
+@app.route("/chat/<wa_id>/handoff/<int:minutes>", methods=["POST"])
+def handoff_timed(wa_id, minutes):
+    set_handoff(wa_id, minutes=minutes)
+    return redirect(url_for("chat_view", wa_id=wa_id))
+
+
+@app.route("/api/chat/<wa_id>/status")
+def api_chat_status(wa_id):
+    from database import get_chat_status
+    return {"status": get_chat_status(wa_id)}

@@ -136,3 +136,28 @@ def is_handoff(wa_id):
             return False
 
     return True
+
+
+
+def get_chat_status(wa_id):
+    c = conn()
+    cur = c.cursor()
+    cur.execute("""
+    SELECT handoff, handoff_until
+    FROM chats
+    WHERE wa_id = ?
+    """, (wa_id,))
+    row = cur.fetchone()
+    c.close()
+
+    if not row or not row[0]:
+        return "bot"
+
+    if row[1]:
+        from datetime import datetime
+        if datetime.utcnow() > datetime.fromisoformat(row[1]):
+            disable_handoff(wa_id)
+            return "bot"
+        return "human_timed"
+
+    return "human"

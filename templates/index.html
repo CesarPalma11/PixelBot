@@ -8,6 +8,7 @@
 body {
     font-family: Inter, Arial, sans-serif;
     background: #f5f6f8;
+    margin: 0;
 }
 
 .navbar {
@@ -18,7 +19,7 @@ body {
 }
 
 .container {
-    max-width: 800px;
+    max-width: 900px;
     margin: auto;
     padding: 20px;
 }
@@ -30,6 +31,11 @@ body {
     border-radius: 8px;
     display: flex;
     justify-content: space-between;
+    align-items: center;
+}
+
+.status {
+    font-size: 13px;
 }
 </style>
 </head>
@@ -55,10 +61,16 @@ async function refreshChats() {
     data.chats.forEach(c => {
         const div = document.createElement("div");
         div.className = "chat-item";
+
+        const status = c.handoff
+            ? "🔴 Humano"
+            : "🟢 Bot";
+
         div.innerHTML = `
-            <a href="/chat/${c.wa_id}">📱 ${c.name}</a>
-            <span>${c.timestamp}</span>
+            <a href="/chat/${c.wa_id}">📱 ${c.name || c.wa_id}</a>
+            <span class="status">${status}</span>
         `;
+
         list.appendChild(div);
     });
 }

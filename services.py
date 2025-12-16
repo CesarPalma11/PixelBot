@@ -58,44 +58,34 @@ def obtener_Mensaje_whatsapp(msg):
 def administrar_chatbot(text, number, messageId, name):
     text = text.lower().strip()
 
-    # 👤 humano activo
+    # 🔒 BLOQUEO TOTAL
     if is_handoff(number):
-        print("👤 Modo humano activo")
+        print("🔴 Chat en modo humano — bot OFF")
         return
 
-    # 👉 pedir asesor
     if text in ["asesor", "hablar con una persona"]:
         set_handoff(number, minutes=60)
         enviar_Mensaje_whatsapp(text_Message(
             number,
-            "👤 Te paso con un asesor.\n🤖 El bot se reactivará automáticamente en 1 hora."
+            "👤 Te paso con un asesor.\n"
+            "⏱️ Atención humana por 1 hora."
         ))
-        save_message(number, name, "bot", "handoff activado")
+        save_message(number, name, "bot", "[handoff] humano 1h")
         return
 
     if "hola" in text:
         enviar_Mensaje_whatsapp(buttonReply_Message(
             number,
             ["Ver productos", "Soporte", "Estado de mi pedido"],
-            "👋 Hola, ¿en qué puedo ayudarte?\n\nEscribí *asesor* para hablar con una persona 👤"
+            "👋 Hola\nEscribí *asesor* para hablar con una persona 👤"
         ))
-        return
-
-    respuestas = {
-        "ver productos": "🛒 Te paso el catálogo",
-        "soporte": "🛠️ Contame tu problema",
-        "estado de mi pedido": "📦 Decime tu número de pedido"
-    }
-
-    if text in respuestas:
-        enviar_Mensaje_whatsapp(text_Message(number, respuestas[text]))
-        save_message(number, name, "bot", respuestas[text])
         return
 
     enviar_Mensaje_whatsapp(text_Message(
         number,
         "No entendí 🤖. Escribí *hola*."
     ))
+
 
 
 def replace_start(s):

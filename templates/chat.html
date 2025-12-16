@@ -18,8 +18,19 @@ body {
     font-weight: 600;
     border-bottom: 1px solid #ddd;
     display: flex;
+    align-items: center;
     gap: 12px;
 }
+
+.status {
+    font-size: 13px;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.status.bot { background: #e6f4ea; color: #137333; }
+.status.human { background: #fdecea; color: #b3261e; }
+.status.timed { background: #fff4e5; color: #b06000; }
 
 .chat-container {
     max-width: 700px;
@@ -81,16 +92,34 @@ body {
     display: flex;
     gap: 10px;
 }
+
+input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+button {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: none;
+    background: #4d7bff;
+    color: white;
+    cursor: pointer;
+}
 </style>
 </head>
 
 <body>
 
 <div class="topbar">
-    <a href="/">←</a> Chat con {{ wa_id }}
+    <a href="/">←</a>
+    Chat con {{ wa_id }}
+    <span id="statusBadge" class="status"></span>
 
     <form action="/chat/{{ wa_id }}/close" method="POST" style="margin-left:auto">
-        <button>🔄 Reactivar bot</button>
+        <button type="submit">🤖 Reactivar bot</button>
     </form>
 </div>
 
@@ -114,10 +143,10 @@ body {
 </div>
 
 <form id="sendForm" class="input-area">
-<div class="input-body">
-    <input type="text" id="text" placeholder="Escribí un mensaje..." required>
-    <button>Enviar</button>
-</div>
+    <div class="input-body">
+        <input type="text" id="text" placeholder="Escribí un mensaje..." required>
+        <button>Enviar</button>
+    </div>
 </form>
 
 <script>
@@ -125,6 +154,7 @@ const chat = document.getElementById("chat");
 let lastCount = parseInt(chat.dataset.count, 10);
 const WA = chat.dataset.wa;
 
+// 🔄 refrescar mensajes
 async function refreshChat() {
     const res = await fetch(`/api/chat/${WA}/messages`);
     const data = await res.json();
@@ -146,7 +176,6 @@ async function refreshChat() {
                 <div class="timestamp">${m.timestamp}</div>
             </div>
         `;
-
         chat.appendChild(row);
     }
 
@@ -154,6 +183,27 @@ async function refreshChat() {
     chat.scrollTop = chat.scrollHeight;
 }
 
+// 🔴 estado bot / humano
+async function refreshStatus() {
+    const res = await fetch(`/api/chat/${WA}/status`);
+    const data = await res.json();
+    const badge = document.getElementById("statusBadge");
+
+    badge.className = "status";
+
+    if (data.status === "bot") {
+        badge.textContent = "🟢 Bot activo";
+        badge.classList.add("bot");
+    } else if (data.status === "human") {
+        badge.textContent = "🔴 Humano activo";
+        badge.classList.add("human");
+    } else {
+        badge.textContent = "⏳ Humano (temporal)";
+        badge.classList.add("timed");
+    }
+}
+
+// enviar mensaje
 document.getElementById("sendForm").addEventListener("submit", async e => {
     e.preventDefault();
     const input = document.getElementById("text");
@@ -170,6 +220,9 @@ document.getElementById("sendForm").addEventListener("submit", async e => {
 });
 
 setInterval(refreshChat, 2000);
+setInterval(refreshStatus, 3000);
+refreshChat();
+refreshStatus();
 </script>
 
 </body>
