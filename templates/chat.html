@@ -116,9 +116,13 @@ button {
 <div class="topbar">
     <a href="/">←</a>
     Chat con {{ wa_id }}
+
     <span id="statusBadge" class="status"></span>
 
-    <form action="/chat/{{ wa_id }}/close" method="POST" style="margin-left:auto">
+    <form id="reactivateForm"
+          action="/chat/{{ wa_id }}/close"
+          method="POST"
+          style="margin-left:auto; display:none;">
         <button type="submit">🤖 Reactivar bot</button>
     </form>
 </div>
@@ -187,19 +191,20 @@ async function refreshChat() {
 async function refreshStatus() {
     const res = await fetch(`/api/chat/${WA}/status`);
     const data = await res.json();
+
     const badge = document.getElementById("statusBadge");
+    const form = document.getElementById("reactivateForm");
 
     badge.className = "status";
 
-    if (data.status === "bot") {
+    if (data.handoff) {
+        badge.textContent = "🔴 Persona activa";
+        badge.classList.add("human");
+        form.style.display = "block";
+    } else {
         badge.textContent = "🟢 Bot activo";
         badge.classList.add("bot");
-    } else if (data.status === "human") {
-        badge.textContent = "🔴 Humano activo";
-        badge.classList.add("human");
-    } else {
-        badge.textContent = "⏳ Humano (temporal)";
-        badge.classList.add("timed");
+        form.style.display = "none";
     }
 }
 
