@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-from database import save_message, set_handoff, is_handoff, reset_handoff
+from database import save_message, set_handoff, is_handoff
 
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
@@ -16,7 +16,7 @@ def ya_reacciono(number):
 def set_reacciono_flag(number):
     _reaccionados[number] = True
 
-# --- FUNCIONES PRINCIPALES ---
+
 def enviar_Mensaje_whatsapp(data):
     headers = {
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
@@ -93,7 +93,7 @@ def reaccionar_mensaje(message_id, emoji="👋"):
 def administrar_chatbot(text, intent, number, messageId, name):
     text = (text or "").lower().strip()
 
-    # --- Si está en handoff, no hace nada ---
+    # Si está en handoff, no hacemos nada
     if is_handoff(number):
         return
 
@@ -147,9 +147,9 @@ def administrar_chatbot(text, intent, number, messageId, name):
         save_message(number, name, "bot", "Handoff activado")
         return
 
-    # --- FINALIZAR CONVERSACIÓN ---
     if intent == "finalizar":
-        reset_handoff(number)  # Reactiva el bot inmediatamente
+        # Solo reactiva el bot; no enviamos mensaje
+        set_handoff(number, minutes=0)
         save_message(number, name, "bot", "Conversación finalizada")
         return
 
