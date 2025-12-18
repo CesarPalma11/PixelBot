@@ -132,7 +132,7 @@ def administrar_chatbot(text, intent, number, messageId, name):
             "✔️ Webs corporativas\n"
             "✔️ Integración con WhatsApp"
         ))
-        save_message(number, name, "bot", "Info webs")
+        save_message(number, name, text_Message)
         return
 
     if intent == "asesor" or text == "asesor":
