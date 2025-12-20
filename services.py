@@ -108,7 +108,7 @@ def administrar_chatbot(text, intent, number, messageId, name):
             number,
             "👋 ¡Hola! Soy PixelBot. ¿Cómo podemos ayudarte?"
         ))
-        save_message(number, name, "bot", "Saludo con botones")
+        save_message(number, name, text_Message)
         return
 
     # --- BOTONES ---
@@ -121,7 +121,7 @@ def administrar_chatbot(text, intent, number, messageId, name):
             "✔️ Atención híbrida\n\n"
             "¿Querés una demo?"
         ))
-        save_message(number, name, "bot", "Info chatbots")
+        save_message(number, name, text_Message)
         return
 
     if intent == "webs":
@@ -142,7 +142,7 @@ def administrar_chatbot(text, intent, number, messageId, name):
             "👤 Te paso con un asesor de PixelTech.\n"
             "⏱️ A la brevedad se comunicarán con usted."
         ))
-        save_message(number, name, "bot", "Handoff activado")
+        save_message(number, name, "bot", "Bot desactivado, modo humano activado")
         return
 
 
